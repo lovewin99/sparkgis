@@ -55,6 +55,12 @@ object CaculateGis {
 
 //    val sc = sparkInstance.getInstance
 
+//    val sparkConf = new SparkConf().setAppName("sparkgis Application")
+//    sparkConf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+//    sparkConf.registerKryoClasses(Array(classOf[cn.com.gis.tools.User],
+//      classOf[cn.com.gis.tools.StaticCellInfo],
+//      classOf[cn.com.gis.tools.XDR_UE_MR_S]))
+
     val conf = new SparkConf().setAppName("sparkgis Application")
     val sc = new SparkContext(conf)
     val textRDD = sc.textFile(args(0))

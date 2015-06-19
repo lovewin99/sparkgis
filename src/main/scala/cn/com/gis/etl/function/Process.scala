@@ -100,7 +100,7 @@ object Process {
       xdr.ta_ = if (e(4) != "") e(4).toInt else -1
       xdr.aoa_ = if (e(6) != "") e(6).toInt else -1
       xdr.serving_freq_ = if (e(0) != "") e(0).toInt else -1
-      xdr.serving_rsrp_ = if (e(2) != "") e(2).toInt else 0
+      xdr.serving_rsrp_ = if (e(2) != "") e(2).toInt else -1
 
       xdr.nei_cell_pci_ = if (e(17) != "") e(17).toInt else -1
       xdr.nei_freq_ = if (e(16) != "") e(16).toInt else -1
@@ -115,18 +115,27 @@ object Process {
       val rsrp = xdr.serving_rsrp_
 
       if(res._1 == -1 || res._1 == -1){
-        // 如果没有算出经纬度
-        time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + "-1"
+        // 如果没有算出经纬度(广西)
+//        time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + "-1"
+        //(公安)
+        e.take(e.length -1 ).mkString("|")  + "|" + "-1" + "|" + "-1"
       } else{
-        val coo = lonLat2Mercator(res._1, res._2)
+        // 以下为公安逻辑
+        e.take(e.length -1 ).mkString("|") + "|" + res._1.toString + "|" + res._2.toString
+
+        //　以下为广西逻辑
+
+/*        val coo = lonLat2Mercator(res._1, res._2)
         val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
         val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
         val time: Long = xdr.time_ / 1000000
         val rsrp = xdr.serving_rsrp_
-        val lon6 = lastword(res._1)
-        val lat6 = lastword(res._2)
+//        val lon6 = lastword(res._1)
+//        val lat6 = lastword(res._2)
 
-        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + lon6.toString + lat6.toString
+//        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + lon6.toString + lat6.toString
+        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
+*/
 
         // 以下为验证数据准确性
 //        val tobj = CellInfo.getOrElse(xdr.cell_id_ , new StaticCellInfo)

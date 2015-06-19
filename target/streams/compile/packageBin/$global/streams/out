@@ -46,6 +46,8 @@
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/tools/XDR_UE_MR_S.class[0m
 [0m[[0mdebug[0m] [0m	cn/com[0m
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com[0m
+[0m[[0mdebug[0m] [0m	cn/com/gis/etl/function/Process$$anonfun$5.class[0m
+[0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/etl/function/Process$$anonfun$5.class[0m
 [0m[[0mdebug[0m] [0m	com/utils/RedisUtils$$anonfun$2.class[0m
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/com/utils/RedisUtils$$anonfun$2.class[0m
 [0m[[0mdebug[0m] [0m	cn/com/gis/tools/GenNeiCell$$anonfun$file2St$2$$anonfun$2.class[0m
@@ -62,8 +64,6 @@
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/tools/GenNeiCell$$anonfun$file2St$2.class[0m
 [0m[[0mdebug[0m] [0m	cn/com/gis/etl/function/Process$$anonfun$Setup$2.class[0m
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/etl/function/Process$$anonfun$Setup$2.class[0m
-[0m[[0mdebug[0m] [0m	cn/com/gis/etl/function/Process$$anonfun$4$$anonfun$5.class[0m
-[0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/etl/function/Process$$anonfun$4$$anonfun$5.class[0m
 [0m[[0mdebug[0m] [0m	cn/com/gis/tools/DataSt$.class[0m
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/tools/DataSt$.class[0m
 [0m[[0mdebug[0m] [0m	config/redis.properties[0m
@@ -92,8 +92,6 @@
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/etl/function/Process$$anonfun$6.class[0m
 [0m[[0mdebug[0m] [0m	cn/com/gis[0m
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis[0m
-[0m[[0mdebug[0m] [0m	cn/com/gis/etl/function/Process$$anonfun$8.class[0m
-[0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/etl/function/Process$$anonfun$8.class[0m
 [0m[[0mdebug[0m] [0m	cn/com/gis/tools/sparkInstance.class[0m
 [0m[[0mdebug[0m] [0m	  /home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/cn/com/gis/tools/sparkInstance.class[0m
 [0m[[0mdebug[0m] [0m	cn/com/gis/etl/function/Process$$anonfun$3.class[0m
