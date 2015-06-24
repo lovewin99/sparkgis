@@ -64,8 +64,8 @@ object Process {
   }
 
   def init(): Unit ={
-    val center_latitude = 40.0
-    val center_longgitude = -74.0
+    val center_latitude = 23.91
+    val center_longgitude = 106.62
 
     disper_longitude_ = calc_distance(center_longgitude - 1, center_latitude, center_longgitude + 1, center_latitude) / 2
     disper_latitude_ = calc_distance(center_longgitude, center_latitude - 1, center_longgitude, center_latitude + 1) / 2
@@ -116,16 +116,16 @@ object Process {
 
       if(res._1 == -1 || res._1 == -1){
         // 如果没有算出经纬度(广西)
-//        time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + "-1"
+        time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + "-1"
         //(公安)
-        e.take(e.length -1 ).mkString("|")  + "|" + "-1" + "|" + "-1"
+//        e.take(e.length -1 ).mkString("|")  + "|" + "-1" + "|" + "-1"
       } else{
         // 以下为公安逻辑
-        e.take(e.length -1 ).mkString("|") + "|" + res._1.toString + "|" + res._2.toString
+//        e.take(e.length -1 ).mkString("|") + "|" + res._1.toString + "|" + res._2.toString
 
         //　以下为广西逻辑
 
-/*        val coo = lonLat2Mercator(res._1, res._2)
+        val coo = lonLat2Mercator(res._1, res._2)
         val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
         val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
         val time: Long = xdr.time_ / 1000000
@@ -135,7 +135,7 @@ object Process {
 
 //        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + lon6.toString + lat6.toString
         time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
-*/
+
 
         // 以下为验证数据准确性
 //        val tobj = CellInfo.getOrElse(xdr.cell_id_ , new StaticCellInfo)

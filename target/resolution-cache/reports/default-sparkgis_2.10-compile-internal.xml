@@ -7,7 +7,7 @@
 		revision="1.0"
 		conf="compile-internal"
 		confs="compile, runtime, test, provided, optional, compile-internal, runtime-internal, test-internal, plugin, sources, docs, pom, scala-tool"
-		date="20150618191146"/>
+		date="20150623113353"/>
 	<dependencies>
 		<module organisation="org.apache.spark" name="spark-assembly_2.10">
 			<revision name="1.0.1" status="release" pubdate="20140705015646" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://spark.apache.org/" downloaded="false" searched="false" default="false" conf="default(compile), default, compile, runtime, master" position="93">
