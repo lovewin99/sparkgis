@@ -28,6 +28,10 @@ object Process {
   var x = 11626986.857844816
   var y = 2614746.4238366615
 
+  val aM = 6378245.0
+  val ee = 0.00669342162296594323
+  val x_pi = Pi * 3000.0 / 180.0
+
   def Setup(): (Map[Int, StaticCellInfo], Map[String, Int]) ={
 
     val tmpCellInfo = Map[Int, StaticCellInfo]()
@@ -125,17 +129,21 @@ object Process {
 
         //　以下为广西逻辑
 
-        val coo = lonLat2Mercator(res._1, res._2)
-        val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
-        val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
-        val time: Long = xdr.time_ / 1000000
-        val rsrp = xdr.serving_rsrp_
+//        val coo = lonLat2Mercator(res._1, res._2)
+//        val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
+//        val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
+//        val time: Long = xdr.time_ / 1000000
+//        val rsrp = xdr.serving_rsrp_
 //        val lon6 = lastword(res._1)
 //        val lat6 = lastword(res._2)
 
-//        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + lon6.toString + lat6.toString
-        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
+//        val lon6 = baoliu(res._1)
+//        val lat6 = baoliu(res._2)
 
+//        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + lon6.toString + lat6.toString
+//        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
+
+//        time.toString + "|" + lon6 + "|" + lat6 + "|" + rsrp.toString
 
         // 以下为验证数据准确性
 //        val tobj = CellInfo.getOrElse(xdr.cell_id_ , new StaticCellInfo)
@@ -144,6 +152,15 @@ object Process {
 //
 //        val distance = calc_distance(res._1, res._2, tlon, tlat)
 //        time.toString + "|" + res._1.toString + "|" + res._2.toString + "|" + rsrp.toString + "|" + lon6.toString + lat6.toString + "|" + distance.toString
+
+        //版本二
+        val mcoo = transform2Mars(res._1, res._2)
+        val coo = lonLat2Mercator(mcoo._1, mcoo._2)
+        val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
+        val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
+        val time: Long = xdr.time_ / 1000000
+        val rsrp = xdr.serving_rsrp_
+        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
       }
     }
 
@@ -168,6 +185,69 @@ object Process {
     str
   }
 
+  def baoliu(n : Double) : String = {
+    val a = n.toInt
+    val b = ((n - a) * 100000).toInt
+    var str = ""
+    if(b / 10000 != 0)
+      str = b.toString
+    else if(b / 1000 != 0)
+      str = "0" +b.toString
+    else if(b / 100 != 0)
+      str = "00" +b.toString
+    else if(b / 10 != 0)
+      str = "000" +b.toString
+    else
+      str = "0000" +b.toString
+
+    a + "." + str
+  }
+
+  // 地球坐标转火星坐标
+  //*******************************************************/
+  def outOfChina(lon : Double, lat : Double) : Boolean ={
+    if(lon < 72.004 && lon > 137.8347 || lat < 0.8293 || lat > 55.8271){
+      true
+    }else{
+      false
+    }
+  }
+
+  def transformLat(x : Double, y : Double) : Double={
+    var ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * sqrt(abs(x))
+    ret += (20.0 * sin(6.0 * x * Pi) + 20.0 * sin(2.0 * x * Pi)) * 2.0 / 3.0
+    ret += (160.0 * sin(y / 12.0 * Pi) + 320 * sin(y * Pi / 30.0)) * 2.0 / 3.0
+    ret
+  }
+
+  def transformLon(x : Double, y : Double) : Double={
+    var ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * sqrt(abs(x))
+    ret += (20.0 * sin(6.0 * x * Pi) + 20.0 * sin(2.0 * x * Pi)) * 2.0 / 3.0
+    ret += (20.0 * sin(x * Pi) + 40.0 * sin(x / 3.0 * Pi)) * 2.0 / 3.0;
+    ret += (150.0 * sin(x / 12.0 * Pi) + 300.0 * sin(x / 30.0 * Pi)) * 2.0 / 3.0
+    ret
+  }
+
+  def transform2Mars(wgLon : Double, wgLat : Double) : (Double, Double)={
+    if(outOfChina(wgLon, wgLat)){
+      (wgLon, wgLat)
+    }else{
+      var dLat = transformLat(wgLon - 105.0, wgLat - 35.0)
+      var dLon = transformLon(wgLon - 105.0, wgLat - 35.0)
+      val radLat = wgLat / 180.0 * Pi
+      var magic = sin(radLat)
+      magic = 1 - ee * magic * magic
+      val sqrtMagic = sqrt(magic)
+      dLat = (dLat * 180.0) / ((aM * (1 - ee)) / (magic * sqrtMagic) * Pi)
+      dLon = (dLon * 180.0) / (aM / sqrtMagic * cos(radLat) * Pi)
+      val mgLat = wgLat + dLat
+      val mgLon = wgLon + dLon
+      (mgLon, mgLat)
+    }
+  }
+
+  //*******************************************************/
+
   //经纬度转墨卡托
   def lonLat2Mercator(lon : Double, lat : Double) : (Double, Double) = {
     val x = lon * 20037508.342789 / 180
@@ -186,7 +266,7 @@ object Process {
           case -1 => None
           case _ => {
             //是否5秒内 是则使用udata的aoa
-            val sdf = new SimpleDateFormat("yyyyMMddHmmss")
+            val sdf = new SimpleDateFormat("yyyyMMddHHmmss")
             val datas = sdf.parse(sdata.time_.toString).getTime
             val datau = sdf.parse(udata.time.toString).getTime
             if (abs(datas - datau) < 5000) {
