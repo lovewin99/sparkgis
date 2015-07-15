@@ -12,6 +12,8 @@ libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-core_2.10" % "1.1.0"
 )
 
+resolvers += "Nexus Repository" at "http://101.251.236.34:8081/nexus/content/groups/scalasbt/"
+
 resolvers += Resolver.url("cloudera", url("https://repository.cloudera.com/artifactory/cloudera-repos/."))
 
 resolvers += Resolver.url("MavenOfficial", url("http://repo1.maven.org/maven2"))
