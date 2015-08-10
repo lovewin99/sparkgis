@@ -96,7 +96,7 @@ object GenNeiCell {
 
     }
 
-    file2St("/home/wangxy/test1/test1.txt")
+    file2St("/home/wangxy/test1.txt")
 
 
     RedisUtils.delTable("baseinfo")

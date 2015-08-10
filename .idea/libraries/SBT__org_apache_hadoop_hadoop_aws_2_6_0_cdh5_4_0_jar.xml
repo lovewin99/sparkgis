@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="SBT: org.apache.hadoop:hadoop-aws:2.6.0-cdh5.4.0:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.apache.hadoop/hadoop-aws/jars/hadoop-aws-2.6.0-cdh5.4.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.apache.hadoop/hadoop-aws/docs/hadoop-aws-2.6.0-cdh5.4.0-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.apache.hadoop/hadoop-aws/srcs/hadoop-aws-2.6.0-cdh5.4.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

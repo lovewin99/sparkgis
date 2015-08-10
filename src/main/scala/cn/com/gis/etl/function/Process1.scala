@@ -85,49 +85,56 @@ object Process1 {
     }
   }
 
+
   def reduceProcess(key : String, Iter : Iterable[String], cellmap : Map[Int, StaticCellInfo], neimap : Map[String, Int]): String = {
-    init
 
-    CellInfo = cellmap
-    NeiInfo = neimap
-    val vlist = Iter.toList.map(_.split("\\|")).sortBy(_(33))
-    var usr = new User
-    val a = vlist.map{e =>
-      val xdr = new XDR_UE_MR_S
+    if(key.equals("-1")){
+      "-1" + "|" + "-1" + "|" + "-1" + "|" + "-1" + "|" + "-1"
+    }
+    else {
+      init
 
-      xdr.cell_id_ = if (e(28) != "") e(28).toInt else -1
-      xdr.ta_ = if (e(4) != "") e(4).toInt else -1
-      xdr.aoa_ = if (e(6) != "") e(6).toInt else -1
-      xdr.serving_freq_ = if (e(0) != "") e(0).toInt else -1
-      xdr.serving_rsrp_ = if (e(2) != "") e(2).toInt else -1
+      CellInfo = cellmap
+      NeiInfo = neimap
+      val vlist = Iter.toList.map(_.split("\\|")).sortBy(_(33))
+      var usr = new User
+      val a = vlist.map{e =>
+        val xdr = new XDR_UE_MR_S
 
-      xdr.nei_cell_pci_ = if (e(17) != "") e(17).toInt else -1
-      xdr.nei_freq_ = if (e(16) != "") e(16).toInt else -1
-      xdr.nei_rsrp_ = if (e(18) != "") e(18).toInt else -1
-      xdr.time_ = e(33).toLong
+        xdr.cell_id_ = if (e(28) != "") e(28).toInt else -1
+        xdr.ta_ = if (e(4) != "") e(4).toInt else -1
+        xdr.aoa_ = if (e(6) != "") e(6).toInt else -1
+        xdr.serving_freq_ = if (e(0) != "") e(0).toInt else -1
+        xdr.serving_rsrp_ = if (e(2) != "") e(2).toInt else -1
 
-      // 计算经纬度
-      val res = locate(xdr, usr)
+        xdr.nei_cell_pci_ = if (e(17) != "") e(17).toInt else -1
+        xdr.nei_freq_ = if (e(16) != "") e(16).toInt else -1
+        xdr.nei_rsrp_ = if (e(18) != "") e(18).toInt else -1
+        xdr.time_ = e(33).toLong
 
-      usr = res._3
-      val time: Long = xdr.time_ / 1000000
-      val rsrp = xdr.serving_rsrp_
+        // 计算经纬度
+        val res = locate(xdr, usr)
 
-      if(res._1 == -1 || res._1 == -1){
-        // 如果没有算出经纬度(广西)
-        time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + "-1"
-      } else{
-        val mcoo = transform2Mars(res._1, res._2)
-        val coo = lonLat2Mercator(mcoo._1, mcoo._2)
-        val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
-        val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
+        usr = res._3
         val time: Long = xdr.time_ / 1000000
         val rsrp = xdr.serving_rsrp_
-        time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
-      }
-    }
 
-    a.mkString("\n")
+        if(res._1 == -1 || res._1 == -1){
+          // 如果没有算出经纬度(广西)
+          time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + "-1"
+        } else{
+          val mcoo = transform2Mars(res._1, res._2)
+          val coo = lonLat2Mercator(mcoo._1, mcoo._2)
+          val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
+          val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
+          val time: Long = xdr.time_ / 1000000
+          val rsrp = xdr.serving_rsrp_
+          time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
+        }
+      }
+
+      a.mkString("\n")
+    }
   }
 
   def lastword(n : Double) : String = {
