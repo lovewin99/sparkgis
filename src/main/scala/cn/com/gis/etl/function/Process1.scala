@@ -89,7 +89,7 @@ object Process1 {
   def reduceProcess(key : String, Iter : Iterable[String], cellmap : Map[Int, StaticCellInfo], neimap : Map[String, Int]): String = {
 
     if(key.equals("-1")){
-      "-1" + "|" + "-1" + "|" + "-1" + "|" + "-1" + "|" + "-1"
+      "-1" + "|" + "-1" + "|" + "-1" + "|" + "-1"
     }
     else {
       init
@@ -116,18 +116,18 @@ object Process1 {
         val res = locate(xdr, usr)
 
         usr = res._3
-        val time: Long = xdr.time_ / 1000000
+        val time: Long = xdr.time_ / 100000000
         val rsrp = xdr.serving_rsrp_
 
         if(res._1 == -1 || res._1 == -1){
           // 如果没有算出经纬度(广西)
-          time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + "-1"
+          time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp
         } else{
           val mcoo = transform2Mars(res._1, res._2)
           val coo = lonLat2Mercator(mcoo._1, mcoo._2)
           val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
           val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
-          val time: Long = xdr.time_ / 1000000
+//          val time: Long = xdr.time_ / 100000000
           val rsrp = xdr.serving_rsrp_
           time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
         }
@@ -295,7 +295,7 @@ object Process1 {
     val angle = aoa / 2       //aoa ta 没有ntohs
     val cellinfo_ = CellInfo.getOrElse(cell_id, new StaticCellInfo)
 
-    if (angle != -1 && angle < 360 && ta != -1 && ta < 2048 && cellinfo_.cellid_ != -1){
+    if (aoa != -1 && angle < 360 && ta != -1 && ta < 2048 && cellinfo_.cellid_ != -1){
       val radius = distance(ta)
       val radian = (360 - angle) * Pi / 180
       val x = cos(radian) * radius
@@ -326,10 +326,11 @@ object Process1 {
           case -1 => {
             var radius = 0.0
             val ta = sdata.ta_
+            var tmp = 1
             if (ta < 2048 && ta != -1) {
-              radius = distance(ta)
-            } else if (0 == sdata.serving_rsrp_){
-              radius = GetDistanceByRsrp(sdata.serving_rsrp_, 1)
+              radius = distance(ta) / 100000
+            } else if (-1 != sdata.serving_rsrp_){
+              radius = GetDistanceByRsrp(sdata.serving_rsrp_, 1) / 100000
             } else {
               radius = (random * 1000).toInt * 0.000001
             }
@@ -342,10 +343,10 @@ object Process1 {
             if (rad1 <= 0){
               // 10% 落在小区背面
               longitude_ = main_cell.longitude_ - nPosX
-              latitude_ = main_cell.latitude_ - nPosX
+              latitude_ = main_cell.latitude_ - nPosY
             } else {
               longitude_ = main_cell.longitude_ + nPosX
-              latitude_ = main_cell.latitude_ + nPosX
+              latitude_ = main_cell.latitude_ + nPosY
             }
             (longitude_, latitude_, 2)
           }

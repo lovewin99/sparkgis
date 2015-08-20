@@ -23,33 +23,41 @@ object GenNeiCell {
   var Cneiinfo = Map[String, String]()        //["cellid,pci_freq", cellid(临区的)]
 
   def file2St(path : String): Unit ={
+    var num = 0
     for (line <- Source.fromFile(path).getLines){
       val strArr : Array[String] = line.split("\t")
       strArr(0)(0) match {
         case '#' => None            // 忽略注释行
         case _ => {
-          val c_info = new StaticCellInfo
-          val enbid = strArr(0).toInt
-          val cell_in_enb = strArr(1).toInt
-          c_info.cellid_ = (enbid << 8) | cell_in_enb
-          c_info.longitude_ = strArr(2).toDouble
-          c_info.latitude_ = strArr(3).toDouble
-          c_info.freq_ = strArr(7).toInt
-          c_info.cell_pci_ = strArr(8).toInt
-          c_info.in_door_ = strArr(9).toInt
-          c_info.azimuth_ = strArr(10).toInt
-          val key = (c_info.cell_pci_ << 16) | c_info.freq_
-          c_info.pci_freq = key
-          CellInfo.put(c_info.cellid_, c_info)
+          if(strArr.length == 11){
+            val c_info = new StaticCellInfo
+            val enbid = strArr(0).toInt
+            val cell_in_enb = strArr(1).toInt
+            c_info.cellid_ = (enbid << 8) | cell_in_enb
+            c_info.longitude_ = strArr(2).toDouble
+            c_info.latitude_ = strArr(3).toDouble
+            c_info.freq_ = strArr(7).toInt
+            c_info.cell_pci_ = strArr(8).toInt
+            c_info.in_door_ = strArr(9).toInt
+            c_info.azimuth_ = strArr(10).toInt
+            val key = (c_info.cell_pci_ << 16) | c_info.freq_
+            c_info.pci_freq = key
+            CellInfo.put(c_info.cellid_, c_info)
 
-          var vec : Vector[Int] = Pcifreq2Cells.getOrElse(key, Vector[Int]())
-          vec = c_info.cellid_ +: vec
-          Pcifreq2Cells.put(key, vec)
+            var vec : Vector[Int] = Pcifreq2Cells.getOrElse(key, Vector[Int]())
+            vec = c_info.cellid_ +: vec
+            Pcifreq2Cells.put(key, vec)
 
-          Cbaseinfo.put(c_info.cellid_.toString, line.toString)
+            Cbaseinfo.put(c_info.cellid_.toString, line.toString)
+          }else {
+            println(line)
+            num += 1
+          }
         }
       }
     }
+
+    println("num = " + num)
     // 计算每个区域的临区
     CellInfo.foreach(e =>{
       val vec = Pcifreq2Cells.getOrElse(e._2.pci_freq, Vector[Int]())
@@ -96,7 +104,7 @@ object GenNeiCell {
 
     }
 
-    file2St("/home/wangxy/test1.txt")
+    file2St("/home/wangxy/data/test1.txt")
 
 
     RedisUtils.delTable("baseinfo")
