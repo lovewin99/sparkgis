@@ -121,7 +121,7 @@ object Process1 {
 
         if(res._1 == -1 || res._1 == -1){
           // 如果没有算出经纬度(广西)
-          time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp
+          time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + res._4
         } else{
           val mcoo = transform2Mars(res._1, res._2)
           val coo = lonLat2Mercator(mcoo._1, mcoo._2)
@@ -129,7 +129,7 @@ object Process1 {
           val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
 //          val time: Long = xdr.time_ / 100000000
           val rsrp = xdr.serving_rsrp_
-          time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString
+          time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + res._4
         }
       }
 
