@@ -4,7 +4,7 @@
 		module="sparkgis$sources_javadoc_2.10"
 		revision="1.0"
 		status="integration"
-		publication="20150907142829"
+		publication="20150908154153"
 	/>
 	<configurations>
 		<conf name="compile" visibility="public" description=""/>

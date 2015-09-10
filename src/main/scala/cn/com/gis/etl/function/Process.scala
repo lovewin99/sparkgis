@@ -206,7 +206,7 @@ object Process {
   // 地球坐标转火星坐标
   //*******************************************************/
   def outOfChina(lon : Double, lat : Double) : Boolean ={
-    if(lon < 72.004 && lon > 137.8347 || lat < 0.8293 || lat > 55.8271){
+    if(lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271){
       true
     }else{
       false
