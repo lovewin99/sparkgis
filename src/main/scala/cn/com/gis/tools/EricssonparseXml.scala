@@ -34,13 +34,12 @@ object EricssonparseXml {
         val strArr = (x text).split(" ", -1)
         if(strArr.length == 31){
           ret += List[String](strArr(10), strArr(11), strArr(0), strArr(2), strArr(4), strArr(5), strArr(6), strArr(7), strArr(23), strArr(24), strArr(25),
-            strArr(26), strArr(27), "", strArr(29), strArr(30), strArr(13), strArr(14), strArr(1), strArr(3), strArr(21), "", "", "", "", "", "").mkString("|")
+            strArr(26), strArr(27), "", strArr(29), strArr(30), strArr(13), strArr(14), strArr(1), strArr(3), strArr(21), "", "", "", "", "", "").mkString("|").replace("NIL", "")
+          ret += (eNBId, columnsValue, timeValue)
+          ret.mkString("|")
         }else{
           "-1"
         }
-        ret += (x text).replace(" ", "|").replace("NIL", "")  // v
-        ret += (eNBId, columnsValue, timeValue)
-        ret.mkString("|")
       }.mkString("\n")
     }.mkString("\n")
 
