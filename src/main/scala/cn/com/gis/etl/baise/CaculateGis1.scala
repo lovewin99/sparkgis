@@ -1,15 +1,14 @@
-package cn.com.gis.etl
+package cn.com.gis.etl.baise
 
 /**
  * Created by wangxy on 15-8-5.
  */
 
 //import org.apache.hadoop.io.{Text, LongWritable}
-import org.apache.spark.{SparkContext, SparkConf}
-import SparkContext._
+import org.apache.spark.{SparkConf, SparkContext}
 
 //import cn.com.gis.tools.{sparkInstance}
-import cn.com.gis.etl.function.Process1
+import cn.com.gis.etl.baise.function.Process1
 
 
 object CaculateGis1 {

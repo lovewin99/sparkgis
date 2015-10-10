@@ -1,10 +1,9 @@
-package cn.com.gis.etl
+package cn.com.gis.etl.baise
 
-import org.apache.spark.{SparkContext, SparkConf}
-import SparkContext._
+import org.apache.spark.{SparkConf, SparkContext}
 
 //import cn.com.gis.tools.{sparkInstance}
-import cn.com.gis.etl.function.Process
+import cn.com.gis.etl.baise.function.Process
 
 
 /**
