@@ -15,7 +15,7 @@ object HaiNanGenTable {
   val prop = ConfigUtils.getConfig(propFile)
   val LimitNeiDistance = prop.getOrElse("LimitNeiDistance", "0.03").toFloat
 
-  class sCellInfo{
+  class sCellInfo extends Serializable{
     var lon = 0.0
     var lat = 0.0
     var bcch_bsic = 0L
@@ -63,7 +63,7 @@ object HaiNanGenTable {
         Cbaseinfo.put(basekey.toString, basevalue)
         CellInfo.put(basekey, c_info)
       }else{
- //       println(x + "========" + strArr.length)
+        println(x + "========" + strArr.length)
         num += 1
       }
     })

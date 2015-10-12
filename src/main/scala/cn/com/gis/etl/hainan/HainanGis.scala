@@ -122,7 +122,7 @@ object HainanGis {
       last_neib_rxlev = mr(index_RxlevSub).toInt
 
     var weig_cell = (mr(index_RxlevSub).toInt - last_neib_rxlev)*1.0/10 + WeigBase
-    var weig_sum = 0
+    var weig_sum = 0.0
     if(weig_cell >= WeigBase){
       weig_sum += weig_cell
       longi *= weig_cell
