@@ -68,28 +68,32 @@ object HaiNanGenTable {
       }
     })
 
+    BsicBcch2Cells.foreach(x =>{
+      Cneiinfo.put(x._1.toString, x._2.mkString(","))
+    })
+
     println("num = " + num)
 
     // 构建临区信息表
-    CellInfo.foreach(x => {
-      val tmparr = new ArrayBuffer[String]()
-      val arr = BsicBcch2Cells.getOrElse(x._2.bcch_bsic, ArrayBuffer[Long]())
-      arr.foreach(y => {
-        val neiCell = CellInfo.getOrElse(y, new sCellInfo)
-        neiCell.cellid match{
-          case x._1 => None // 排除自己
-          case _ => {
-            // 计算各临区与自己的距离
-            val distance = pow(neiCell.lon - x._2.lon, 2) + pow(neiCell.lat - x._2.lat, 2)
-            if(distance < LimitNeiDistance){
-              tmparr += neiCell.cellid.toString
-            }
-          }
-        }
-      })
-      if(tmparr.length > 1)
-        Cneiinfo.put(x._2.bcch_bsic.toString, tmparr.mkString(","))
-    })
+//    CellInfo.foreach(x => {
+//      val tmparr = new ArrayBuffer[String]()
+//      val arr = BsicBcch2Cells.getOrElse(x._2.bcch_bsic, ArrayBuffer[Long]())
+//      arr.foreach(y => {
+//        val neiCell = CellInfo.getOrElse(y, new sCellInfo)
+//        neiCell.cellid match{
+//          case x._1 => None // 排除自己
+//          case _ => {
+//            // 计算各临区与自己的距离
+//            val distance = pow(neiCell.lon - x._2.lon, 2) + pow(neiCell.lat - x._2.lat, 2)
+//            if(distance < LimitNeiDistance){
+//              tmparr += neiCell.cellid.toString
+//            }
+//          }
+//        }
+//      })
+//      if(tmparr.length > 1)
+//        Cneiinfo.put(x._2.bcch_bsic.toString, tmparr.mkString(","))
+//    })
   }
 
   def main(args: Array[String]): Unit ={

@@ -45,8 +45,6 @@ class StaticCellInfo extends Serializable{
 
 }
 
-
-
 object DataSt {
 
   def main(args: Array[String]): Unit ={
