@@ -7,7 +7,7 @@ import cn.com.gis.tools._
 
 import scala.collection.mutable.Map
 
-import java.text.SimpleDateFormat;
+import java.text.SimpleDateFormat
 
 /**
  * Created by wangxy on 15-7-13.
@@ -353,7 +353,7 @@ object Process1 {
           case _ =>{
             //有临区信息
             main_cell.in_door_ match{
-              case 1 => {
+              case 0 => {
                 // 室内
                 val ll1 = GetInsideMRLonLat(main_cell)
                 (ll1._1, ll1._2, 3)
