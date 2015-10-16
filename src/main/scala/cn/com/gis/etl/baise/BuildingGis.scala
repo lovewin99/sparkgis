@@ -1,18 +1,18 @@
-package cn.com.gis.etl.baise.function
+package cn.com.gis.etl.baise
 
+/**
+ * Created by wangxy on 15-10-16.
+ */
+
+import cn.com.gis.tools.{XDR_UE_MR_S, User, StaticCellInfo}
 import com.utils.RedisUtils
-
-import scala.math._
-import cn.com.gis.tools._
-
+import org.apache.spark.{SparkContext, SparkConf}
 import scala.collection.mutable.Map
 
 import java.text.SimpleDateFormat
+import scala.math._
 
-/**
- * Created by wangxy on 15-7-13.
- */
-object Process1 {
+object BuildingGis {
   var m_dbWeigBase = 1.0        // 权值由1调整为0.6 0.8 1.2 1.4 1.6，测试结果以确定合理权值
   var disper_longitude_ = 0.0
   var disper_latitude_ = 0.0
@@ -27,6 +27,10 @@ object Process1 {
   val ee = 0.00669342162296594323
   val x_pi = Pi * 3000.0 / 180.0
 
+  val indoor = 0
+  val outdoor = 1
+  val unknow = 2
+
   def Setup(): (Map[Int, StaticCellInfo], Map[String, Int]) ={
 
     val tmpCellInfo = Map[Int, StaticCellInfo]()
@@ -35,25 +39,25 @@ object Process1 {
     //    Process.init
 
     //读取基础表
-    val cellinfo = RedisUtils.getResultMap("baseinfo")
+    val cellinfo = RedisUtils.getResultMap("buildingbaseinfo")
     cellinfo.foreach(e => {
       val c_info = new StaticCellInfo
       val strArr = e._2.split("\t")
-      if (strArr.length == 11){
+      if (strArr.length == 12){
         c_info.cellid_ = e._1.toInt
         c_info.longitude_ = strArr(2).toDouble
         c_info.latitude_ = strArr(3).toDouble
-        c_info.freq_ = strArr(7).toInt
-        c_info.cell_pci_ = strArr(8).toInt
-        c_info.in_door_ = strArr(9).toInt
-        c_info.azimuth_ = strArr(10).toInt
+        c_info.freq_ = strArr(8).toInt
+        c_info.cell_pci_ = strArr(9).toInt
+        c_info.in_door_ = strArr(10).toInt
+        c_info.azimuth_ = strArr(11).toInt
 
         tmpCellInfo.put(e._1.toInt, c_info)
       }
     })
 
     //读取临区表
-    val neiinfo = RedisUtils.getResultMap("neiinfo")
+    val neiinfo = RedisUtils.getResultMap("buildingneiinfo")
     neiinfo.foreach(e => {
       val key = e._1
       val value = e._2.toInt
@@ -76,7 +80,7 @@ object Process1 {
 
     if(strArr.length == 33){
       //MmeUeS1apId,MmeCode,MmeGroupId 三个字段标识用户
-      val userId = strArr(29) + "," + strArr(30) + "," + strArr(31)
+      val userId = strArr(29) + "|" + strArr(30) + "|" + strArr(31)
 
       val time = strArr(32).replaceAll("[\\-: ]", "")
       (userId, in + "|" +time)
@@ -121,15 +125,18 @@ object Process1 {
 
         if(res._1 == -1 || res._1 == -1){
           // 如果没有算出经纬度(广西)
-          time.toString + "|" + "-1" + "|" + "-1" + "|" + rsrp + "|" + res._4
+          "-1"
         } else{
           val mcoo = transform2Mars(res._1, res._2)
           val coo = lonLat2Mercator(mcoo._1, mcoo._2)
-          val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
-          val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
-//          val time: Long = xdr.time_ / 100000000
+          val sgX = if ((coo._1 - x) % 50 != 0) ((coo._1 - x) / 50 + 1).toInt else ((coo._1 - x) / 50).toInt
+          val sgY = if ((coo._2 - y) % 50 != 0) ((coo._2 - y) / 50 + 1).toInt else ((coo._2 - y) / 50).toInt
+          //          val time: Long = xdr.time_ / 100000000
           val rsrp = xdr.serving_rsrp_
-          time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + res._4
+          val neirsrp = xdr.nei_rsrp_
+          val cellid = xdr.cell_id_
+          Array[String](xdr.time_.toString, key, sgX.toString, sgY.toString, cellid.toString, rsrp.toString, neirsrp.toString, res._5.toString, res._4.toString).mkString(",")
+          //          time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + res._5
         }
       }
 
@@ -226,7 +233,7 @@ object Process1 {
     (x, y)
   }
 
-  def locate(sdata : XDR_UE_MR_S, udata : User) : (Double, Double, User, Int) ={
+  def locate(sdata : XDR_UE_MR_S, udata : User) : (Double, Double, User, Int, Int) ={
     var aoa = sdata.aoa_
     aoa match{
       //如果数据没有aoa信息
@@ -279,15 +286,31 @@ object Process1 {
       }
     }
 
-    // 通过aoa, ta 计算经纬度
-    val res = locate_by_ta_aoa(aoa, ta, sdata.cell_id_)
-    res._1 match{
-      case -1 => {
-        // 如果第一种算法计算失败　则使用第二种算法
-        val res1 = locate_by_nei_level(sdata)
-        (res1._1, res1._2, udata, res1._3)
+    val indoordata = locate_by_indoor(sdata.cell_id_)
+    if(indoordata._1 == -1){
+      // 通过aoa, ta 计算经纬度
+      val res = locate_by_ta_aoa(aoa, ta, sdata.cell_id_)
+      res._1 match{
+        case -1 => {
+          // 如果第一种算法计算失败　则使用第二种算法
+          val res1 = locate_by_nei_level(sdata)
+          (res1._1, res1._2, udata, res1._3, unknow)
+        }
+        case _ => (res._1, res._2, udata, res._3, unknow)
       }
-      case _ => (res._1, res._2, udata, res._3)
+    } else{
+      (indoordata._1, indoordata._2, udata, indoordata._3, indoor)
+    }
+
+
+  }
+
+  def locate_by_indoor(cell_id : Int): (Double, Double, Int) = {
+    val cellinfo_ = CellInfo.getOrElse(cell_id, new StaticCellInfo)
+    if (cellinfo_.in_door_ == 0) {
+      (cellinfo_.longitude_, cellinfo_.latitude_, 100)
+    } else{
+      (-1, -1, -1)
     }
   }
 
@@ -523,8 +546,27 @@ object Process1 {
     dDeta
   }
 
+
   def main(args : Array[String]): Unit ={
+    if (args.length != 2) {
+      System.err.println("Usage: <in-file> <out-file>")
+      System.exit(1)
+    }
 
+    val conf = new SparkConf().setAppName("BuildingGis Application")
+    val sc = new SparkContext(conf)
+
+    val textRDD = sc.textFile(args(0))
+
+    val xmap = Setup
+    val x = sc.broadcast(xmap._1)
+    val y = sc.broadcast(xmap._2)
+
+    val result = textRDD.mapPartitions(Iter => {
+      Iter.map(e => mapProcess(e))
+    }).groupByKey().map(e => reduceProcess(e._1, e._2, x.value, y.value))
+
+
+    result.saveAsTextFile(args(1))
   }
-
 }

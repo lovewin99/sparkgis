@@ -118,8 +118,8 @@ object BuildingTable1 {
             val lat = strArr(build_lat).toDouble
             val lon = strArr(build_lon).toDouble
             val coo = Process1.lonLat2Mercator(lon, lat)
-            val sgX = if ((coo._1 - x) % 100 != 0) ((coo._1 - x) / 100 + 1).toInt else ((coo._1 - x) / 100).toInt
-            val sgY = if ((coo._2 - y) % 100 != 0) ((coo._2 - y) / 100 + 1).toInt else ((coo._2 - y) / 100).toInt
+            val sgX = if ((coo._1 - x) % 50 != 0) ((coo._1 - x) / 50 + 1).toInt else ((coo._1 - x) / 50).toInt
+            val sgY = if ((coo._2 - y) % 50 != 0) ((coo._2 - y) / 50 + 1).toInt else ((coo._2 - y) / 50).toInt
             val key = Array[String](sgX.toString, sgY.toString).mkString(",")
 
             Cbuildinginfo.put(key, "1")
@@ -138,14 +138,14 @@ object BuildingTable1 {
 
     }
 
-    file2St("/home/wangxy/data/test1.txt")
-
-
-    RedisUtils.delTable("buildingbaseinfo")
-    RedisUtils.delTable("buildingneiinfo")
-
-    RedisUtils.putMap2RedisTable("buildingbaseinfo", Cbaseinfo)
-    RedisUtils.putMap2RedisTable("buildingneiinfo", Cneiinfo)
+//    file2St("/home/wangxy/data/test1.txt")
+//
+//
+//    RedisUtils.delTable("buildingbaseinfo")
+//    RedisUtils.delTable("buildingneiinfo")
+//
+//    RedisUtils.putMap2RedisTable("buildingbaseinfo", Cbaseinfo)
+//    RedisUtils.putMap2RedisTable("buildingneiinfo", Cneiinfo)
 
     BuildingInfo("/home/wangxy/data/building.txt")
 
