@@ -5,6 +5,7 @@ import org.apache.spark.{SparkContext, SparkConf}
 
 /**
  * Created by wangxy on 15-10-16.
+ * 最终字段: time,userid,x,y,cellid,rsrp,neirsrp,inout,gisreason,inoutreason
  */
 object BuildingInOut {
 
