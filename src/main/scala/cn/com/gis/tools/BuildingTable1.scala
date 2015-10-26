@@ -4,7 +4,7 @@ package cn.com.gis.tools
  * Created by wangxy on 15-10-16.
  */
 
-import cn.com.gis.etl.baise.function.Process1
+import cn.com.gis.etl.baise.function.Process2
 import com.utils.RedisUtils
 
 import scala.math._
@@ -14,7 +14,7 @@ import scala.collection.mutable.Map
 object BuildingTable1 {
 
   // 基础字典表 以cell_id为key
-  var CellInfo = Map[Int, StaticCellInfo]()
+  var CellInfo = Map[Int, BStaticCellInfo]()
   // 通过pci_freq 找cell_id 的表
   var Pcifreq2Cells = Map[Int, Vector[Int]]()
 
@@ -38,7 +38,7 @@ object BuildingTable1 {
         case '#' => None            // 忽略注释行
         case _ => {
           if(strArr.length == 12){
-            val c_info = new StaticCellInfo
+            val c_info = new BStaticCellInfo
             val enbid = strArr(0).toInt
             val cell_in_enb = strArr(1).toInt
             c_info.cellid_ = (enbid << 8) | cell_in_enb
@@ -48,6 +48,7 @@ object BuildingTable1 {
             c_info.cell_pci_ = strArr(9).toInt
             c_info.in_door_ = strArr(10).toInt
             c_info.azimuth_ = strArr(11).toInt
+            c_info.bname = strArr(7)
             val key = (c_info.cell_pci_ << 16) | c_info.freq_
             c_info.pci_freq = key
             CellInfo.put(c_info.cellid_, c_info)
@@ -75,7 +76,7 @@ object BuildingTable1 {
           var minDistance : Double= 1000.0
           var cell_id = -1
           for (i <- 0 to vec.size -1){
-            val neiCell : StaticCellInfo = CellInfo.getOrElse(vec(i), new StaticCellInfo)
+            val neiCell : BStaticCellInfo = CellInfo.getOrElse(vec(i), new BStaticCellInfo)
             neiCell.cellid_ match{
               case e._1 => None     //排除自己
               case _ => {
@@ -117,7 +118,8 @@ object BuildingTable1 {
           if(strArr.length == build_length){
             val lat = strArr(build_lat).toDouble
             val lon = strArr(build_lon).toDouble
-            val coo = Process1.lonLat2Mercator(lon, lat)
+            val res = Process2.transform2Mars(lon, lat)
+            val coo = Process2.lonLat2Mercator(res._1, res._2)
             val sgX = if ((coo._1 - x) % 50 != 0) ((coo._1 - x) / 50 + 1).toInt else ((coo._1 - x) / 50).toInt
             val sgY = if ((coo._2 - y) % 50 != 0) ((coo._2 - y) / 50 + 1).toInt else ((coo._2 - y) / 50).toInt
             val key = Array[String](sgX.toString, sgY.toString).mkString(",")

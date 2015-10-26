@@ -4,7 +4,7 @@ package cn.com.gis.etl.baise
  * Created by wangxy on 15-10-16.
  */
 
-import cn.com.gis.tools.{XDR_UE_MR_S, User, StaticCellInfo}
+import cn.com.gis.tools.{XDR_UE_MR_S, User, BStaticCellInfo}
 import com.utils.RedisUtils
 import org.apache.spark.{SparkContext, SparkConf}
 import scala.collection.mutable.Map
@@ -17,7 +17,7 @@ object BuildingGis {
   var disper_longitude_ = 0.0
   var disper_latitude_ = 0.0
 
-  var CellInfo = Map[Int, StaticCellInfo]()
+  var CellInfo = Map[Int, BStaticCellInfo]()
   var NeiInfo = Map[String, Int]()              //["cellid,pci_freq", cellid(临区的)]
 
   var x = 11626986.857844816
@@ -31,9 +31,9 @@ object BuildingGis {
   val outdoor = 1
   val unknow = 2
 
-  def Setup(): (Map[Int, StaticCellInfo], Map[String, Int]) ={
+  def Setup(): (Map[Int, BStaticCellInfo], Map[String, Int]) ={
 
-    val tmpCellInfo = Map[Int, StaticCellInfo]()
+    val tmpCellInfo = Map[Int, BStaticCellInfo]()
     val tmpNeiInfo = Map[String, Int]()              //["cellid,pci_freq", cellid(临区的)]
     // 初始化计算位置需要的参数
     //    Process.init
@@ -41,7 +41,7 @@ object BuildingGis {
     //读取基础表
     val cellinfo = RedisUtils.getResultMap("buildingbaseinfo")
     cellinfo.foreach(e => {
-      val c_info = new StaticCellInfo
+      val c_info = new BStaticCellInfo
       val strArr = e._2.split("\t")
       if (strArr.length == 12){
         c_info.cellid_ = e._1.toInt
@@ -51,6 +51,7 @@ object BuildingGis {
         c_info.cell_pci_ = strArr(9).toInt
         c_info.in_door_ = strArr(10).toInt
         c_info.azimuth_ = strArr(11).toInt
+        c_info.bname = strArr(7)
 
         tmpCellInfo.put(e._1.toInt, c_info)
       }
@@ -90,7 +91,7 @@ object BuildingGis {
   }
 
 
-  def reduceProcess(key : String, Iter : Iterable[String], cellmap : Map[Int, StaticCellInfo], neimap : Map[String, Int]): String = {
+  def reduceProcess(key : String, Iter : Iterable[String], cellmap : Map[Int, BStaticCellInfo], neimap : Map[String, Int]): String = {
 
     if(key.equals("-1")){
       "-1" + "|" + "-1" + "|" + "-1" + "|" + "-1"
@@ -135,7 +136,7 @@ object BuildingGis {
           val rsrp = xdr.serving_rsrp_
           val neirsrp = xdr.nei_rsrp_
           val cellid = xdr.cell_id_
-          Array[String](xdr.time_.toString, key, sgX.toString, sgY.toString, cellid.toString, rsrp.toString, neirsrp.toString, res._5.toString, res._4.toString).mkString(",")
+          Array[String](xdr.time_.toString, key, sgX.toString, sgY.toString, cellid.toString, rsrp.toString, neirsrp.toString, res._5.toString, res._4.toString, res._6).mkString(",")
           //          time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + res._5
         }
       }
@@ -233,7 +234,7 @@ object BuildingGis {
     (x, y)
   }
 
-  def locate(sdata : XDR_UE_MR_S, udata : User) : (Double, Double, User, Int, Int) ={
+  def locate(sdata : XDR_UE_MR_S, udata : User) : (Double, Double, User, Int, Int, String) ={
     var aoa = sdata.aoa_
     aoa match{
       //如果数据没有aoa信息
@@ -294,29 +295,29 @@ object BuildingGis {
         case -1 => {
           // 如果第一种算法计算失败　则使用第二种算法
           val res1 = locate_by_nei_level(sdata)
-          (res1._1, res1._2, udata, res1._3, unknow)
+          (res1._1, res1._2, udata, res1._3, unknow, "")
         }
-        case _ => (res._1, res._2, udata, res._3, unknow)
+        case _ => (res._1, res._2, udata, res._3, unknow, "")
       }
     } else{
-      (indoordata._1, indoordata._2, udata, indoordata._3, indoor)
+      (indoordata._1, indoordata._2, udata, indoordata._3, indoor, indoordata._4)
     }
 
 
   }
 
-  def locate_by_indoor(cell_id : Int): (Double, Double, Int) = {
-    val cellinfo_ = CellInfo.getOrElse(cell_id, new StaticCellInfo)
+  def locate_by_indoor(cell_id : Int): (Double, Double, Int, String) = {
+    val cellinfo_ = CellInfo.getOrElse(cell_id, new BStaticCellInfo)
     if (cellinfo_.in_door_ == 0) {
-      (cellinfo_.longitude_, cellinfo_.latitude_, 100)
+      (cellinfo_.longitude_, cellinfo_.latitude_, 100, cellinfo_.bname)
     } else{
-      (-1, -1, -1)
+      (-1, -1, -1, "")
     }
   }
 
   def locate_by_ta_aoa(aoa : Int, ta : Int, cell_id : Int) : (Double, Double, Int) ={
     val angle = aoa / 2       //aoa ta 没有ntohs
-    val cellinfo_ = CellInfo.getOrElse(cell_id, new StaticCellInfo)
+    val cellinfo_ = CellInfo.getOrElse(cell_id, new BStaticCellInfo)
 
     if (aoa != -1 && angle < 360 && ta != -1 && ta < 2048 && cellinfo_.cellid_ != -1){
       val radius = distance(ta)
@@ -337,7 +338,7 @@ object BuildingGis {
     var longitude_ : Double = -1
     var latitude_ : Double = -1
     val cellId = sdata.cell_id_
-    val main_cell = CellInfo.getOrElse(cellId, new StaticCellInfo)
+    val main_cell = CellInfo.getOrElse(cellId, new BStaticCellInfo)
     main_cell.cellid_ match{
       // 如果在字典表里没有找到 返回(-1, -1)
       case -1 => {
@@ -390,7 +391,7 @@ object BuildingGis {
                 neiinfo_cellid match{
                   case -1 => (longitude_, latitude_, -3)    //临区信息在redis表中未找到
                   case _ => {
-                    val neiinfo = CellInfo.getOrElse(neiinfo_cellid, new StaticCellInfo)
+                    val neiinfo = CellInfo.getOrElse(neiinfo_cellid, new BStaticCellInfo)
                     neiinfo.cellid_ match{
                       case -1 => (longitude_, latitude_, -4)
                       case _ => if (sdata.nei_rsrp_ == -1 || sdata.serving_rsrp_ > 97) (main_cell.longitude_, main_cell.latitude_, 4)
@@ -409,7 +410,7 @@ object BuildingGis {
     }
   }
 
-  def GetLocInfo(sdata: XDR_UE_MR_S, main_cell : StaticCellInfo, nei_cell : StaticCellInfo) : (Double, Double) ={
+  def GetLocInfo(sdata: XDR_UE_MR_S, main_cell : BStaticCellInfo, nei_cell : BStaticCellInfo) : (Double, Double) ={
     //根据临区信息计算
 
     var longi = main_cell.longitude_
@@ -491,7 +492,7 @@ object BuildingGis {
     (longi, lati)
   }
 
-  def GetInsideMRLonLat(main_cell : StaticCellInfo): (Double, Double) = {
+  def GetInsideMRLonLat(main_cell : BStaticCellInfo): (Double, Double) = {
     // 室内计算
     var longitude_ : Double = -1
     var latitude_ : Double = -1

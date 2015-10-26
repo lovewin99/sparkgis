@@ -9,7 +9,7 @@ import org.apache.spark.{SparkContext, SparkConf}
  */
 object BuildingInOut {
 
-  val index_length = 9
+  val index_length = 10
   val index_time = 0
   val index_userkey = 1
   val index_x = 2
@@ -18,6 +18,7 @@ object BuildingInOut {
   val index_rsrp = 5
   val index_neirsrp = 6
   val index_flag = 7
+  val index_name = 9
 
   val border_rsrp = 46
   val change_rsrp = 10

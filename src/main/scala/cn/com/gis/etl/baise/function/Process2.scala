@@ -395,8 +395,8 @@ object Process2 {
 
     var x_ave = longi
     var y_ave = lati
-    var x_sqrt : Double = 0
-    var y_sqrt : Double = 0
+    var x_sqrt = 0.0
+    var y_sqrt = 0.0
 
     // 先去除非法点
     x_ave += nei_cell.longitude_
