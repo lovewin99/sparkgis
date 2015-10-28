@@ -28,29 +28,35 @@ object GenNeiCell1 {
       strArr(0)(0) match {
         case '#' => None            // 忽略注释行
         case _ => {
-          if(strArr.length == 11){
-            val c_info = new StaticCellInfo1
-            val enbid = strArr(0).toInt
-            val cell_in_enb = strArr(1).toInt
-            c_info.cellid_ = (enbid << 8) | cell_in_enb
-            c_info.longitude_ = strArr(2).toDouble
-            c_info.latitude_ = strArr(3).toDouble
-            c_info.freq_ = strArr(7).toInt
-            c_info.cell_pci_ = strArr(8).toInt
-            c_info.in_door_ = strArr(9).toInt
-            c_info.azimuth_ = strArr(10).toInt
-            val key = (c_info.cell_pci_ << 16) | c_info.freq_
-            c_info.pci_freq = key
-            CellInfo.put(c_info.cellid_, c_info)
+          try {
+            if (strArr.length == 11) {
+              val c_info = new StaticCellInfo1
+              val enbid = strArr(0).toInt
+              val cell_in_enb = strArr(1).toInt
+              c_info.cellid_ = (enbid << 8) | cell_in_enb
+              c_info.longitude_ = strArr(2).toDouble
+              c_info.latitude_ = strArr(3).toDouble
+              c_info.freq_ = strArr(7).toInt
+              c_info.cell_pci_ = strArr(8).toInt
+              c_info.in_door_ = strArr(9).toInt
+              c_info.azimuth_ = strArr(10).toInt
+              val key = (c_info.cell_pci_ << 16) | c_info.freq_
+              c_info.pci_freq = key
+              CellInfo.put(c_info.cellid_, c_info)
 
-            var arrB = Pcifreq2Cells.getOrElse(key, ListBuffer[Int]())
-            arrB += c_info.cellid_
-            Pcifreq2Cells.put(key, arrB)
+              var arrB = Pcifreq2Cells.getOrElse(key, ListBuffer[Int]())
+              arrB += c_info.cellid_
+              Pcifreq2Cells.put(key, arrB)
 
-            Cbaseinfo.put(c_info.cellid_.toString, line.toString)
-          }else {
-            println(line)
-            num += 1
+              Cbaseinfo.put(c_info.cellid_.toString, line.toString)
+            } else {
+              println(line)
+              num += 1
+            }
+          }
+          catch {
+            case e: NumberFormatException => println(line)
+            case unknown: Throwable => println(line)
           }
         }
       }
