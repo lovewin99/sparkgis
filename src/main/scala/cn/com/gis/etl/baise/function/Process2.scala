@@ -387,84 +387,88 @@ object Process2 {
     }
   }
 
-  def GetLocInfo(sdata: XDR_UE_MR_S1, main_cell : StaticCellInfo1, nei_cell : StaticCellInfo1) : (Double, Double) ={
-    //根据临区信息计算
-
+  def GetLocInfo(sdata: XDR_UE_MR_S1, main_cell : StaticCellInfo1, nei_cell : StaticCellInfo1) : (Double, Double) = {
     var longi = main_cell.longitude_
     var lati = main_cell.latitude_
-
     var x_ave = longi
     var y_ave = lati
     var x_sqrt = 0.0
     var y_sqrt = 0.0
+    var i = 0
 
-    // 先去除非法点
-    x_ave += nei_cell.longitude_
-    y_ave += nei_cell.latitude_
+    for(i <- 0 to 1){
+      x_ave += nei_cell.longitude_
+      y_ave += nei_cell.latitude_
+    }
+
     x_ave /= 2
     y_ave /= 2
 
     x_sqrt = pow(longi - x_ave, 2)
     y_sqrt = pow(lati - y_ave, 2)
 
-    x_sqrt += pow(nei_cell.longitude_ - x_ave, 2)
-    y_sqrt += pow(nei_cell.latitude_ - y_ave,2)
+    for(i <- 0 to 1){
+      x_sqrt += pow(nei_cell.longitude_ - x_ave, 2)
+      y_sqrt += pow(nei_cell.latitude_ - y_ave, 2)
+    }
 
     x_sqrt = sqrt(x_sqrt)
     y_sqrt = sqrt(y_sqrt)
 
-    var last_neib_rsrp = 0L
-    var is_nei = true
+    var last_neib_rsrp = 0.0
     if (abs(nei_cell.longitude_ - longi) < 0.00001 &&
       abs(nei_cell.latitude_ - lati) < 0.00001){
       // 情况1 ：同站
       last_neib_rsrp = sdata.serving_rsrp_
-      is_nei = false
     } else if (abs(nei_cell.longitude_ -longi) >= 2.5 * x_sqrt ||
       abs(nei_cell.latitude_ -lati) >= 2.5 * y_sqrt){
       // 情况2 ：非法点
       last_neib_rsrp = sdata.serving_rsrp_
-      is_nei = false
+//      is_nei = false
     } else {
       last_neib_rsrp = sdata.nei_rsrp_
     }
 
-    if (sdata.serving_rsrp_ < last_neib_rsrp)
+    var weig_base = m_dbWeigBase
+    if(sdata.serving_rsrp_ < last_neib_rsrp){
       last_neib_rsrp = sdata.serving_rsrp_
+    }
 
-
-    var weig_cell = (sdata.serving_rsrp_ - last_neib_rsrp) * 1.0 /10 + m_dbWeigBase
-    var weig_sum :Double = 0
-    if (weig_cell > m_dbWeigBase){
+    var weig_cell = (sdata.serving_rsrp_ - last_neib_rsrp)*1.0/10 + weig_base
+    var weig_sum = 0.0
+    if(weig_cell >= weig_base){
       weig_sum += weig_cell
       longi *= weig_cell
       lati *= weig_cell
     }
 
-    if(is_nei){
-      weig_cell = (sdata.nei_rsrp_ - last_neib_rsrp) * 1.0 / 10 + m_dbWeigBase
-      if (weig_cell >= m_dbWeigBase){
+    for(i <- 0 to 1){
+      weig_cell = (sdata.nei_rsrp_ - last_neib_rsrp)*1.0/10 + weig_base
+      if(weig_cell >= weig_base){
         longi += (nei_cell.longitude_ * weig_cell)
         lati += (nei_cell.latitude_ * weig_cell)
         weig_sum += weig_cell
       }
     }
-
-    if(weig_sum != 0){
-      longi /= weig_sum
-      lati /= weig_sum
-    }
+    longi /= weig_sum
+    lati /= weig_sum
 
     // 去掉定位直线
     if (main_cell.longitude_ != -1 && main_cell.latitude_ != -1){
-      val rad = if((random - 0.5) > 0)  1 else -1
+//      val rad = if((random - 0.5) > 0)  1 else -1
       val dbDistance = sqrt((longi - main_cell.longitude_) * (longi - main_cell.longitude_) +
         (lati - main_cell.latitude_) * (lati - main_cell.latitude_))
-      longi = longi -dbDistance * 0.996 * rad
-      lati = lati + dbDistance * 0.0872 * rad
-
+      longi = longi -dbDistance * 0.996 * (if((random - 0.5) > 0)  1 else -1)
+      lati = lati + dbDistance * 0.0872 * (if((random - 0.5) > 0)  1 else -1)
     }
 
+//    if((longi - main_cell.longitude_)>0 || (lati - main_cell.latitude_)>0){
+//      println("main_cell.longitude_="+main_cell.longitude_ +" main_cell.longitude_="+main_cell.latitude_)
+//      println("nei_cell.longitude_="+nei_cell.longitude_ +" nei_cell.lati="+nei_cell.latitude_)
+//      println("longi="+longi+" lati="+lati+"  lastrsrp="+last_neib_rsrp+"    weig_sum="+weig_sum)
+//      println("sdata.serving_rsrp_="+sdata.serving_rsrp_ +"   sdata.nei_rsrp_="+sdata.nei_rsrp_)
+//
+//    }
 
     (longi, lati)
   }

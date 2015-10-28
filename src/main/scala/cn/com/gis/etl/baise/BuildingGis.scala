@@ -130,8 +130,10 @@ object BuildingGis {
         } else{
           val mcoo = transform2Mars(res._1, res._2)
           val coo = lonLat2Mercator(mcoo._1, mcoo._2)
-          val sgX = if ((coo._1 - x) % 50 != 0) ((coo._1 - x) / 50 + 1).toInt else ((coo._1 - x) / 50).toInt
-          val sgY = if ((coo._2 - y) % 50 != 0) ((coo._2 - y) / 50 + 1).toInt else ((coo._2 - y) / 50).toInt
+//          val sgX = if ((coo._1 - x) % 50 != 0) ((coo._1 - x) / 50 + 1).toInt else ((coo._1 - x) / 50).toInt
+//          val sgY = if ((coo._2 - y) % 50 != 0) ((coo._2 - y) / 50 + 1).toInt else ((coo._2 - y) / 50).toInt
+          val sgX = ((coo._1) / 50).toInt
+          val sgY = ((coo._2) / 50).toInt
           //          val time: Long = xdr.time_ / 100000000
           val rsrp = xdr.serving_rsrp_
           val neirsrp = xdr.nei_rsrp_

@@ -118,10 +118,12 @@ object BuildingTable1 {
           if(strArr.length == build_length){
             val lat = strArr(build_lat).toDouble
             val lon = strArr(build_lon).toDouble
-            val res = Process2.transform2Mars(lon, lat)
-            val coo = Process2.lonLat2Mercator(res._1, res._2)
-            val sgX = if ((coo._1 - x) % 50 != 0) ((coo._1 - x) / 50 + 1).toInt else ((coo._1 - x) / 50).toInt
-            val sgY = if ((coo._2 - y) % 50 != 0) ((coo._2 - y) / 50 + 1).toInt else ((coo._2 - y) / 50).toInt
+//            val res = Process2.transform2Mars(lon, lat)
+            val coo = Process2.lonLat2Mercator(lon, lat)
+//            val sgX = if ((coo._1 - x) % 50 != 0) ((coo._1 - x) / 50 + 1).toInt else ((coo._1 - x) / 50).toInt
+//            val sgY = if ((coo._2 - y) % 50 != 0) ((coo._2 - y) / 50 + 1).toInt else ((coo._2 - y) / 50).toInt
+            val sgX = ((coo._1) / 50).toInt
+            val sgY = ((coo._2) / 50).toInt
             val key = Array[String](sgX.toString, sgY.toString).mkString(",")
 
             Cbuildinginfo.put(key, "1")
