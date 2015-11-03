@@ -1,16 +1,14 @@
-package cn.com.gis.etl.shanghai
+package cn.com.gis.etl.shanghai.function
 
-/**
- * Created by wangxy on 15-10-30.
- */
-
-import org.apache.spark.{SparkContext, SparkConf}
-import com.utils.RedisUtils
+import scala.math._
 import scala.collection.mutable.Map
 
-object Knn1 {
+/**
+ * Created by wangxy on 15-9-10.
+ */
+object corr1 {
 
-  val K = 3
+  val K = 1
 
   val MR_Length = 45
   // 服务小区所在字段序号
@@ -18,10 +16,11 @@ object Knn1 {
 
   val mr_rsrp = 18 // mr 主rsrp
 
-  val mr_neicellid = 22 // 临区cellid 22是第一次出现
+  val mr_neicellid = 22
+  // 临区cellid 22是第一次出现
   val mr_neirsrp = 23 // 临区rsrp 22是第一次出现
 
-  val neigroup_num= 6        // 临区信息个数
+  val neigroup_num = 6 // 临区信息个数
 
   // 指纹数据长度
   val Finger_length = 18
@@ -39,16 +38,14 @@ object Knn1 {
   // 经度
   val Finger_lat = 3 // 纬度
 
-  val Table_Name = "FingerInfo"   // 指纹库表名
 
-
-  def kmaxoffset(kInfo: List[Array[String]], key: Int, value: String): List[Array[String]] = {
+  def kmaxoffset(kInfo: List[Array[String]], key: Double, value: String): List[Array[String]] = {
     var tmpInfo = kInfo
     if (kInfo.length < K) {
       tmpInfo = tmpInfo ::: List(Array(key.toString, value))
     } else {
       tmpInfo = tmpInfo.sortBy(_(0).toInt).reverse
-      if (tmpInfo(0)(0).toInt > key) {
+      if (tmpInfo(0)(0).toDouble < key) {
         tmpInfo = tmpInfo.tail
         tmpInfo :::= List(Array(key.toString, value))
       }
@@ -93,69 +90,44 @@ object Knn1 {
           info.split("\\$", -1).map(_.split("\\|", -1)).foreach(x => {
             var lrsrp = List[Int]()
             val fingercr = Map[Int, Int]()
-            for (i <- 0 to neigroup_num -1) {
+            for (i <- 0 to neigroup_num - 1) {
               indexfcell = Finger_neicellid + i * 2
               indexfrsrp = Finger_neirsrp + i * 2
               val ineicellid = if (x(Finger_neicellid) != "") x(Finger_neicellid).toInt else -1
               val ineirsrp = if (x(Finger_neirsrp) != "") x(Finger_neirsrp).toInt else -1
-              if(ineicellid != -1 && ineirsrp != -1){
+              if (ineicellid != -1 && ineirsrp != -1) {
                 fingercr.put(ineicellid, ineirsrp)
               }
             }
 
             val fmrsrp = x(Finger_mainrsrp).toInt
-            // 计算电平偏移量
-            var tnum = 1
-            var offset = (fmrsrp - mainrsrp) * (fmrsrp - mainrsrp)
-            mapCellRsrp.foreach(y => {
+
+            // 计算相关系数
+            var fenzi = fmrsrp * mainrsrp
+            var fenmu1 = fmrsrp * fmrsrp
+            var fenmu2 = mainrsrp * mainrsrp
+            mapCellRsrp.foreach(y =>{
               val trsrp = fingercr.getOrElse(y._1, -1)
-              if(trsrp != -1){
-                offset += (trsrp - y._2) * (trsrp - y._2)
-                tnum += 1
+              if (trsrp != -1){
+                fenzi += trsrp * y._2
+                fenmu1 += trsrp * trsrp
+                fenmu2 += y._2 * y._2
               }
             })
-            offset /= tnum
-            kInfo = kmaxoffset(kInfo, offset, x.mkString("|"))
+            val corr = fenzi / sqrt(fenmu1 * fenmu2)
+            kInfo = kmaxoffset(kInfo, corr, x.mkString("|"))
           })
 
-          if (kInfo.length > 0) {
+          if(kInfo.length > 0){
             err = 4
-            var lat1 = 0.0
-            var lon1 = 0.0
-            for (i <- 0 to kInfo.length-1) {
-              val tFinfo = kInfo(i)(1).split("\\|")
-              lat1 += tFinfo(Finger_lon).toDouble
-              lon1 += tFinfo(Finger_lat).toDouble
-            }
-            lat1 /= kInfo.length
-            lon1 /= kInfo.length
-            lon = lon1.toString
-            lat = lat1.toString
+            val tFinfo = kInfo(0)(1).split("\\|")
+            lon = tFinfo(Finger_lon)
+            lat = tFinfo(Finger_lat)
           }
         }
       }
     }
     (lon, lat, err.toString)
   }
-
-  def main(args : Array[String]): Unit ={
-    if (args.length != 2) {
-      System.err.println("Usage: <in-file> <out-file>")
-      System.exit(1)
-    }
-
-
-    val conf = new SparkConf().setAppName("sparkgis Application")
-    val sc = new SparkContext(conf)
-    val textRDD = sc.textFile(args(0))
-
-    val fingerInfo = RedisUtils.getResultMap(Table_Name).toArray
-    val x = sc.broadcast(fingerInfo)
-
-    val result = textRDD.mapPartitions(Iter => {
-      Iter.map(e => Knn1.mapProcess(e, x.value))
-    })
-
-    result.saveAsTextFile(args(1))
-  }
 }
+
