@@ -54,11 +54,11 @@ object tRedisPutMap {
   }
 
   def putMap2Redis(tableName: String, map: Map[String, String]) : Unit ={
-    val start: Long = System.currentTimeMillis
+//    val start: Long = System.currentTimeMillis
     initPool
 
     val j: Jedis = getJedis
-    println("connect time:" + (System.currentTimeMillis - start))
+//    println("connect time:" + (System.currentTimeMillis - start))
 
     withConnection{j =>
       val start1: Long = System.currentTimeMillis
@@ -69,9 +69,22 @@ object tRedisPutMap {
       })
       pipe.sync
 
-      println("scala time:" + (System.currentTimeMillis - start1))
+ //     println("scala time:" + (System.currentTimeMillis - start1))
     }
 
+    destroyPool
+  }
+
+  def deltable(tableName: String): Unit = {
+    initPool
+    val j: Jedis = getJedis
+    withConnection{j =>
+      val start1: Long = System.currentTimeMillis
+      val pipe: Pipeline = j.pipelined
+
+      pipe.del(tableName)
+      pipe.sync
+    }
     destroyPool
   }
 }
