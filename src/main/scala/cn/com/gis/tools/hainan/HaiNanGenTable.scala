@@ -1,10 +1,9 @@
-package cn.com.gis.tools
+package cn.com.gis.tools.hainan
 
 import com.utils.{ConfigUtils, RedisUtils}
-import scala.collection.mutable.Map
+
+import scala.collection.mutable.{ArrayBuffer, Map}
 import scala.io.Source
-import scala.math._
-import scala.collection.mutable.ArrayBuffer
 
 /**
  * Created by wangxy on 15-10-9.

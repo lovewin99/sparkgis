@@ -1,11 +1,11 @@
-package cn.com.gis.tools
+package cn.com.gis.tools.baise
 
-
+import cn.com.gis.tools.StaticCellInfo
 import com.utils.RedisUtils
 
-import scala.math._
-import scala.io.Source
 import scala.collection.mutable.Map
+import scala.io.Source
+import scala.math._
 
 /**
  * Created by wangxy on 15-6-11.

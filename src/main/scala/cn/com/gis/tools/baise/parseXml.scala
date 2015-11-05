@@ -1,11 +1,10 @@
-package cn.com.gis.tools
-
-import org.apache.hadoop.io.{Text, LongWritable}
-import org.apache.spark.{SparkContext, SparkConf}
-
-import scala.collection.mutable.ArrayBuffer
+package cn.com.gis.tools.baise
 
 import cn.com.utils.XmlInputFormat
+import org.apache.hadoop.io.{LongWritable, Text}
+import org.apache.spark.{SparkConf, SparkContext}
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Created by wangxy on 15-8-6.

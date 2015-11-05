@@ -1,15 +1,14 @@
-package cn.com.gis.tools
+package cn.com.gis.tools.baise
 
 /**
  * Created by wangxy on 15-9-28.
  */
 
-import org.apache.hadoop.io.{Text, LongWritable}
-import org.apache.spark.{SparkContext, SparkConf}
+import cn.com.utils.XmlInputFormat
+import org.apache.hadoop.io.{LongWritable, Text}
+import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.collection.mutable.ArrayBuffer
-
-import cn.com.utils.XmlInputFormat
 
 object EricssonparseXml {
   def parseXML1(content: String): String ={

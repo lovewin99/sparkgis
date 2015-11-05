@@ -41,6 +41,7 @@ object gsmGenFingerLib {
 
   // 输出(采样点, 整条数据)
   def inMapProcess(in: String): (String, Array[String]) = {
+    println(in)
     val strArr = in.split(",", -1)
     if(Finger_length == strArr.length){
       (strArr(Sampling_index), strArr)
@@ -58,11 +59,11 @@ object gsmGenFingerLib {
     var mainRsrp = -1
     if(sampling != "-1"){
       val value = ArrayBuffer[(String, Int)]()
-      var isFirst = true
+//      var isFirst = true
       Iter.foreach(x => {
         if("1" == x(ismcell_index)){
-          isFirst = false
-          val coo = lonLat2Mercator(x(lon_index).toDouble, x(lon_index).toDouble)
+//          isFirst = false
+          val coo = lonLat2Mercator(x(lon_index).toDouble, x(lat_index).toDouble)
           val sg = (coo._1 / 50).toInt + "|" + (coo._2 / 50).toInt
           val cell_id = x(lac_index) + "|" + x(ci_index)
           key = (sg, cell_id)
@@ -88,19 +89,20 @@ object gsmGenFingerLib {
     })
     rsrp /= Iter.size
 
-    val neiInfo = ArrayBuffer[(String, Int, Int)]()
+    var neiInfo = ArrayBuffer[(String, Int, Int)]()
     var tBhBc = ""
     var tRsrp = 0
     var tCount = 0
     c.sortBy(_._1).foreach(x => {
       if(x._1 == tBhBc || "" == tBhBc){
+        tBhBc = x._1
         tRsrp += x._2
         tCount += 1
       } else{
-        neiInfo += ((x._1, tRsrp/tCount, tCount))
-        tBhBc = ""
-        tRsrp = 0
-        tCount = 0
+        neiInfo += ((tBhBc, tRsrp/tCount, tCount))
+        tBhBc = x._1
+        tRsrp = x._2
+        tCount = 1
       }
     })
 
@@ -133,7 +135,8 @@ object gsmGenFingerLib {
       .groupByKey().foreachPartition(Iter => {
       val fmap = Map[String, String]()
       Iter.foreach(x => cbReduceProcess(x._1, x._2, fmap))
-      tRedisPutMap.putMap2Redis(Finget_name, fmap)
+      RedisUtils.putMap2RedisTable(Finget_name, fmap)
+      fmap.foreach(println)
     })
   }
 }

@@ -1,15 +1,16 @@
-package cn.com.gis.tools
+package cn.com.gis.tools.baise
 
 /**
  * Created by wangxy on 15-10-21.
  */
 
-import com.utils.RedisUtils
+import cn.com.gis.tools.StaticCellInfo1
 import cn.com.gis.utils.tRedisPutMap
+import com.utils.RedisUtils
 
-import scala.math._
-import scala.io.Source
 import scala.collection.mutable.{ListBuffer, Map}
+import scala.io.Source
+import scala.math._
 
 object GenNeiCell1 {
   // 基础字典表 以cell_id为key
