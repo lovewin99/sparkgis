@@ -1,3 +1,4 @@
 [0m[[0mdebug[0m] [0mCopy resource mappings: [0m
 [0m[[0mdebug[0m] [0m	(/home/wangxy/IdeaProjects/sparkgis/src/main/resources/config,/home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/config)[0m
 [0m[[0mdebug[0m] [0m	(/home/wangxy/IdeaProjects/sparkgis/src/main/resources/config/redis.properties,/home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/config/redis.properties)[0m
+[0m[[0mdebug[0m] [0m	(/home/wangxy/IdeaProjects/sparkgis/src/main/resources/config/hninfo.properties,/home/wangxy/IdeaProjects/sparkgis/target/scala-2.10/classes/config/hninfo.properties)[0m
