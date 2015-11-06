@@ -8,7 +8,6 @@ import cn.com.gis.tools.{XDR_UE_MR_S, User, BStaticCellInfo}
 import com.utils.RedisUtils
 import org.apache.spark.{SparkContext, SparkConf}
 import scala.collection.mutable.Map
-
 import java.text.SimpleDateFormat
 import scala.math._
 
