@@ -180,7 +180,7 @@ object gsmgis1 {
     sqrt(pow(p1._1-p2._1,2)+pow(p1._2-p2._2,2))
   }
 
-  def filterByDistance(finger: ArrayBuffer[(String, Array[Array[String]])], point: (Int, Int)): ArrayBuffer[(String, Array[Array[String]])] = {
+  def filterByDistance(finger: ArrayBuffer[(String, Array[Array[String]])], point: (Int, Int)): ArrayBuffer[(String, Array[Array[String]], Double)] = {
     val fingerD = finger.map(x => {
       val pxy = x._1.split("|", -1)
       val d = getDistance((pxy(0).toInt,pxy(1).toInt), point)
