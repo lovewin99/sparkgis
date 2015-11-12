@@ -94,14 +94,15 @@ object gsmGenFingerLib1 {
       val fingerInfo = lineArr2.filter(_(2) == "1")
       val neiInfo = lineArr2.filter(_(2) == "0").sortBy(_(4)).reverse
       if (fingerInfo.length >= finger_line_max_num) {
-        val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
-        fmap.put(sg, fstr)
+        val fstr = fingerInfo.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
+//        val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
+//        fmap.put(sg, fstr)
       } else {
-        val n = finger_line_max_num - fingerInfo.length - neiInfo.length
+//        val n = finger_line_max_num - fingerInfo.length - neiInfo.length
         fingerInfo ++= neiInfo.slice(0, finger_line_max_num - fingerInfo.length)
-        for (i <- 0 to (n - 1)) {
-          fingerInfo += ArrayBuffer(",,,,")
-        }
+//        for (i <- 0 to (n - 1)) {
+//          fingerInfo += ArrayBuffer(",,,,")
+//        }
         val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
         fmap.put(sg, fstr)
       }

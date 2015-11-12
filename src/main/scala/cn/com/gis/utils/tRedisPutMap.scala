@@ -54,26 +54,51 @@ object tRedisPutMap {
   }
 
   def putMap2Redis(tableName: String, map: Map[String, String]) : Unit ={
-//    val start: Long = System.currentTimeMillis
     initPool
 
     val j: Jedis = getJedis
-//    println("connect time:" + (System.currentTimeMillis - start))
-
     withConnection{j =>
-      val start1: Long = System.currentTimeMillis
       val pipe: Pipeline = j.pipelined
 
       map.foreach(x => {
         pipe.hset(tableName, x._1, x._2)
       })
       pipe.sync
-
- //     println("scala time:" + (System.currentTimeMillis - start1))
     }
 
     destroyPool
   }
+
+//  def withConnection1[A](block: Jedis => scala.collection.immutable.Map[String, String]): scala.collection.immutable.Map[String, String] = {
+//    implicit var redis = this.getJedis
+//    try {
+//      val res = block(redis)
+//      res match {
+//        case Some(map) => res
+//        case _ => scala.collection.immutable.Map()
+//      }
+//    } catch{
+//      case e : Exception => System.err.println(e);  scala.collection.immutable.Map() //should use log in production
+//      //      case _ => //never should happen
+//    }finally {
+//      this.close(pool, redis)
+//    }
+//  }
+
+//  import scala.collection.JavaConversions.
+
+//  def getResultMap(tableName: String): scala.collection.immutable.Map[String, String] = {
+//    initPool
+//
+//    val j: Jedis = getJedis
+//
+//    val result = withConnection1{j =>
+//      val start1: Long = System.currentTimeMillis
+//      val res = j.hgetAll(tableName)
+//      res
+//    }
+//    result
+//  }
 
   def deltable(tableName: String): Unit = {
     initPool
