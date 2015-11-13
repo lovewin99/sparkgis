@@ -5,7 +5,7 @@ import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
-import cn.com.gis.etl.shanghai.function.fingergis1
+import cn.com.gis.etl.shanghai.function.fingergis2
 import com.utils.RedisUtils
 
 /**
@@ -125,7 +125,7 @@ object gsmgis1 {
 //        (x._1, arr)
 //      }.toArray
       Iter.map{x =>
-        fingergis1.location(x._1, x._2, info.value)
+        fingergis2.location(x._1, x._2, info.value)
       }
     }
     result.saveAsTextFile(args(1))

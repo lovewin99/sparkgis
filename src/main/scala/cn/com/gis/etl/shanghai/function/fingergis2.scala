@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
  * Created by wangxy on 15-11-12.
  */
-object fingergis1 {
+object fingergis2 {
 
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
@@ -20,7 +20,7 @@ object fingergis1 {
   val rssi_downlimit = prop.getOrElse("RSSI_DOWNLIMIT", "-100").toInt
   val bseq_index = prop.getOrElse("SEQ_INDEX", "6").toInt
   val bdiff_value = prop.getOrElse("DIFF_VALUE", "12").toInt
-//  val bmaxdiff_value = prop.getOrElse("MAXDIFF_VALUE", "97").toInt
+  //  val bmaxdiff_value = prop.getOrElse("MAXDIFF_VALUE", "97").toInt
   val isfilter_by_mcell = prop.getOrElse("ISFILTER_BY_MCELL", "1")
   val filterByDistance_percent = prop.getOrElse("FILTERBYDISTANCE_PERCENT", "0").toFloat
   //1:方差 2:绝对平均差 3:相关系数
@@ -38,14 +38,14 @@ object fingergis1 {
 
   // 电频值在范围内
   def rejectByRssi(info: ArrayBuffer[String]): Boolean = {
-//    println("rsrp="+info(3))
-//    if(info(3) != "" && info(3).toInt > rssi_downlimit && info(3).toInt < rssi_uplimit){
-//      println("true")
-//      true
-//    }else{
-//      println("false")
-//      false
-//    }
+    //    println("rsrp="+info(3))
+    //    if(info(3) != "" && info(3).toInt > rssi_downlimit && info(3).toInt < rssi_uplimit){
+    //      println("true")
+    //      true
+    //    }else{
+    //      println("false")
+    //      false
+    //    }
     info(3) != "" && info(3).toInt >= rssi_downlimit && info(3).toInt <= rssi_uplimit
   }
 
@@ -60,9 +60,9 @@ object fingergis1 {
       scandata.foreach(x => {
         if(x(2) == "1"){
           fingerprint.foreach(y => {
-//            for(i <- 0 to (finger_line_max_num-1)){
+            //            for(i <- 0 to (finger_line_max_num-1)){
             for(i <- 0 to (y._2.length-1)){
-//              println("y._2(i)="+y._2(i).mkString(","))
+              //              println("y._2(i)="+y._2(i).mkString(","))
               var bfirst1 = true
               if(y._2(i)(2)=="1" && y._2(i)(0)==x.head && bfirst1){
                 finger += y
@@ -142,8 +142,8 @@ object fingergis1 {
         }
       })
     })
-//    println("cdata="+cdata.map(_.mkString(",")).mkString("&"))
-//    println("cfinger="+cfinger.map(_.mkString(",")).mkString("&"))
+    //    println("cdata="+cdata.map(_.mkString(",")).mkString("&"))
+    //    println("cfinger="+cfinger.map(_.mkString(",")).mkString("&"))
     (cdata, cfinger)
   }
 
@@ -218,16 +218,16 @@ object fingergis1 {
           if(sameFactor < samefactor_limit)
             res += variance_offset
         }
-//        case 3 => {
-//          // 相似系数
-//          res = getCorrcoef(dfinger, ddata)
-//          if(res <= similar_limit){
-//            println("res31="+res)
-//            res = -1.0
-//          }else{
-//            println("res32="+res)
-//          }
-//        }
+        //        case 3 => {
+        //          // 相似系数
+        //          res = getCorrcoef(dfinger, ddata)
+        //          if(res <= similar_limit){
+        //            println("res31="+res)
+        //            res = -1.0
+        //          }else{
+        //            println("res32="+res)
+        //          }
+        //        }
         case _ => None
       }
       (x._1, x._2, x._3, sameFactor, res, nSimilar)
@@ -236,42 +236,42 @@ object fingergis1 {
 
   def location(key: String, Iter: Iterable[(Array[String], ArrayBuffer[ArrayBuffer[String]])],
                fingerInfo: Array[(String, Array[Array[String]])]): String = {
-//    println("key="+key)
+    //    println("key="+key)
     var lasttime = 0L
     var osg = "-1|-1"
     Iter.toList.sortBy(_._1(0)).map(x => {
-//      println("cominfo="+x._1.mkString(","))
-//      println("gisinfo="+x._2.map{_.mkString(",")}.mkString("$"))
+      //      println("cominfo="+x._1.mkString(","))
+      //      println("gisinfo="+x._2.map{_.mkString(",")}.mkString("$"))
       var sg = "-1|-1"
       // mr数据处理
       val scandata = x._2
       val scandata1 = scandata.filter(rejectByRssi).sortBy(_(3)).reverse
-      println("scandata1=" + scandata1.map(x => x.mkString(",")).mkString("^"))
-//      println("scandata1.size="+ scandata1.size)
-//      println("fingerInfo="+ fingerInfo(0)._1 + "," + fingerInfo(0)._2.map(_.mkString(",")).mkString("$"))
+//      println("scandata1=" + scandata1.map(x => x.mkString(",")).mkString("^"))
+      //      println("scandata1.size="+ scandata1.size)
+      //      println("fingerInfo="+ fingerInfo(0)._1 + "," + fingerInfo(0)._2.map(_.mkString(",")).mkString("$"))
       // 指纹数据处理 !!!!scandata是有序的,根据rssi由强到弱
       val finger = getCandidateFinger(fingerInfo, scandata1, isfilter_by_mcell)
       if(finger.size != 0 && scandata1.size != 0){
-//        println("finger1=" + finger.map(x => x._2.map(_.mkString(",")).mkString("^")).mkString("\n"))
+        //        println("finger1=" + finger.map(x => x._2.map(_.mkString(",")).mkString("^")).mkString("\n"))
         val pxy = getCorePoint(finger)
         val afinger = filterByDistance(finger, pxy)
-//        println("finger2=" + afinger.map(x => x._2.map(_.mkString(",")).mkString("^")).mkString("\n"))
+        //        println("finger2=" + afinger.map(x => x._2.map(_.mkString(",")).mkString("^")).mkString("\n"))
         if (afinger.length != 0) {
           // 开始计算方差 绝对差 相似系数
           val tfinger = CalculateVarDiffSim(afinger, scandata1, calculate_choice).sortBy(_._6).reverse
           val ffinger = tfinger.slice(0, (tfinger.length*(1.0-similar_percent)).toInt)
-          println("finger3=" + ffinger.map{v =>
-            val nxy1 = v._1.split("\\|", -1)
-            val oxy1 = x._1(1).split("\\|", -1)
-            val d1 = sqrt(pow(nxy1(0).toFloat - oxy1(0).toFloat, 2) + pow(nxy1(1).toFloat - oxy1(1).toFloat, 2))
-            "  distance=" + d1 + "  samefactor=" + v._4 + "  diff=" + v._5 + "  similar="+v._6 +" fsg="+v._1+" dsg="+x._1(1)}.mkString("\n"))
-//          println("finger3=" + ffinger.map(v => v._2.map(_.mkString(",")).mkString("^") + "   distance=" + v._3 + "  samefactor=" + v._4 + "  res=" + v._5 + " fsg="+v._1+" dsg="+x._1(1)).mkString("\n"))
-//          println("calculate_choice="+calculate_choice)
+//          println("finger3=" + ffinger.map{v =>
+//            val nxy1 = v._1.split("\\|", -1)
+//            val oxy1 = x._1(1).split("\\|", -1)
+//            val d1 = sqrt(pow(nxy1(0).toFloat - oxy1(0).toFloat, 2) + pow(nxy1(1).toFloat - oxy1(1).toFloat, 2))
+//            "  distance=" + d1 + "  samefactor=" + v._4 + "  diff=" + v._5 + "  similar="+v._6 +" fsg="+v._1+" dsg="+x._1(1)}.mkString("\n"))
+          //          println("finger3=" + ffinger.map(v => v._2.map(_.mkString(",")).mkString("^") + "   distance=" + v._3 + "  samefactor=" + v._4 + "  res=" + v._5 + " fsg="+v._1+" dsg="+x._1(1)).mkString("\n"))
+          //          println("calculate_choice="+calculate_choice)
           calculate_choice match {
-//            case 3 => {
-//              // 相似系数越大越好
-//              sg = ffinger.sortBy(_._5).reverse.head._1
-//            }
+            //            case 3 => {
+            //              // 相似系数越大越好
+            //              sg = ffinger.sortBy(_._5).reverse.head._1
+            //            }
             case _ => {
               // 方差和平均绝对差越小越好
               sg = ffinger.sortBy(_._5).head._1
