@@ -9,11 +9,12 @@ import scala.collection.mutable.ArrayBuffer
 /**
  * Created by wangxy on 15-11-12.
  */
-object fingergis2 {
+object fingergis3 {
 
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
   val finger_line_max_num = prop.getOrElse("FINGER_LINE_MAX_NUM", "12").toInt
+  val data_per_grid = prop.getOrElse("DATA_PER_GIRD", "6").toInt
   val rsrp_down_border = prop.getOrElse("RSRP_DOWN_BORDER", "-100").toInt
   val grip_size = prop.getOrElse("GRID_SIZE", "25").toInt
   val rssi_uplimit = prop.getOrElse("RSSI_UPLIMIT", "-40").toInt
@@ -34,6 +35,25 @@ object fingergis2 {
   val twicetime_limit = prop.getOrElse("TWICETIME_LIMIT", "3000.0").toLong
   val variance_offset = prop.getOrElse("VARIANCE_OFFSET", "100").toDouble
   val averdiff_offset = prop.getOrElse("AVERDIFF_OFFSET", "30").toDouble
+
+  // 计算两经纬度距离
+  def calc_distance(lon1 : Double, lat1 : Double, lon2 : Double, lat2 : Double) : Double={
+    val Rc = 6378137.00  // 赤道半径
+    val Rj = 6356725     // 极半径
+
+    val radLo1 = lon1 * Pi / 180
+    val radLa1 = lat1 * Pi / 180
+    val Ec1 = Rj + (Rc - Rj) * (90.0 - lat1) / 90.0
+    val Ed1 = Ec1 * cos(radLa1)
+
+    val radLo2 = lon2 * Pi / 180
+    val radLa2 = lat2 * Pi / 180
+
+    val dx = (radLo2 - radLo1) * Ed1
+    val dy = (radLa2 - radLa1) * Ec1
+    val dDeta = sqrt(dx * dx + dy * dy)
+    dDeta
+  }
 
   // 墨卡托转经纬度
   def Mercator2lonlat(x: Int, y: Int): (Double, Double) = {
@@ -69,9 +89,10 @@ object fingergis2 {
         if(x(2) == "1"){
           fingerprint.foreach(y => {
             //            for(i <- 0 to (finger_line_max_num-1)){
+            var bfirst1 = true
             for(i <- 0 to (y._2.length-1)){
               //              println("y._2(i)="+y._2(i).mkString(","))
-              var bfirst1 = true
+              // 纹线信息 Array(标识(bcch|bsic), ta, ismell, rxlevsub, sum)
               if(y._2(i)(2)=="1" && y._2(i)(0)==x.head && bfirst1){
                 finger += y
                 bfirst1 = false
@@ -238,10 +259,13 @@ object fingergis2 {
         //        }
         case _ => None
       }
+      res /= sameFactor
       (x._1, x._2, x._3, sameFactor, res, nSimilar)
     })
   }
 
+  // (用户, (公共信息, 定位信息))
+  // 公共信息: 时间,栅格,采样点  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
   def location(key: String, Iter: Iterable[(Array[String], ArrayBuffer[ArrayBuffer[String]])],
                fingerInfo: Array[(String, Array[Array[String]])]): String = {
     //    println("key="+key)
@@ -253,7 +277,7 @@ object fingergis2 {
       var sg = "-1|-1"
       // mr数据处理
       val scandata = x._2
-      val scandata1 = scandata.filter(rejectByRssi).sortBy(_(3)).reverse
+      val scandata1 = scandata.filter(rejectByRssi).sortBy(_(3)).reverse.slice(0, 7)
       //      println("scandata1=" + scandata1.map(x => x.mkString(",")).mkString("^"))
       //      println("scandata1.size="+ scandata1.size)
       //      println("fingerInfo="+ fingerInfo(0)._1 + "," + fingerInfo(0)._2.map(_.mkString(",")).mkString("$"))
@@ -309,7 +333,10 @@ object fingergis2 {
           // 临时算距离
           val nxy = sg.split("\\|", -1)
           val sxy = x._1(1).split("\\|", -1)
-          val tmpd = sqrt(pow(nxy(0).toInt - sxy(0).toInt, 2) + pow(nxy(1).toInt - sxy(1).toInt, 2))
+          val d = Mercator2lonlat(nxy(0).toInt*grip_size, nxy(1).toInt*grip_size)
+//          val tmpd = rint(sqrt(pow(d._1 - sxy(0).toDouble, 2) + pow(d._2 - sxy(1).toDouble, 2)))
+          val tmpd = calc_distance(d._1, d._2, sxy(0).toDouble, sxy(1).toDouble)
+//          println("sg="+sg+"  sxy="+x._1(1)+"  d="+d + "   tmpd="+tmpd)
           Array[String](x._1(1), sg, tmpd.toString, x._1(2)).mkString(",")
         } else{
           "-1,-1"

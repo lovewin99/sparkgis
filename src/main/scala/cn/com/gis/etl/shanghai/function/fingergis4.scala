@@ -1,24 +1,26 @@
 package cn.com.gis.etl.shanghai.function
 
+/**
+ * Created by wangxy on 15-11-16.
+ */
+
 import java.text.SimpleDateFormat
 
 import com.utils.ConfigUtils
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
 
-/**
- * Created by wangxy on 15-11-12.
- */
-object fingergis2 {
+object fingergis4 {
 
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
   val finger_line_max_num = prop.getOrElse("FINGER_LINE_MAX_NUM", "12").toInt
+  val data_per_grid = prop.getOrElse("DATA_PER_GIRD", "6").toInt
   val rsrp_down_border = prop.getOrElse("RSRP_DOWN_BORDER", "-100").toInt
   val grip_size = prop.getOrElse("GRID_SIZE", "25").toInt
   val rssi_uplimit = prop.getOrElse("RSSI_UPLIMIT", "-40").toInt
   val rssi_downlimit = prop.getOrElse("RSSI_DOWNLIMIT", "-100").toInt
-  val bseq_index = prop.getOrElse("SEQ_INDEX", "6").toInt
+  val bseq_index = prop.getOrElse("SEQ_INDEX", "5").toInt
   val bdiff_value = prop.getOrElse("DIFF_VALUE", "12").toInt
   //  val bmaxdiff_value = prop.getOrElse("MAXDIFF_VALUE", "97").toInt
   val isfilter_by_mcell = prop.getOrElse("ISFILTER_BY_MCELL", "1")
@@ -34,6 +36,25 @@ object fingergis2 {
   val twicetime_limit = prop.getOrElse("TWICETIME_LIMIT", "3000.0").toLong
   val variance_offset = prop.getOrElse("VARIANCE_OFFSET", "100").toDouble
   val averdiff_offset = prop.getOrElse("AVERDIFF_OFFSET", "30").toDouble
+
+  // 计算两经纬度距离
+  def calc_distance(lon1 : Double, lat1 : Double, lon2 : Double, lat2 : Double) : Double={
+    val Rc = 6378137.00  // 赤道半径
+    val Rj = 6356725     // 极半径
+
+    val radLo1 = lon1 * Pi / 180
+    val radLa1 = lat1 * Pi / 180
+    val Ec1 = Rj + (Rc - Rj) * (90.0 - lat1) / 90.0
+    val Ed1 = Ec1 * cos(radLa1)
+
+    val radLo2 = lon2 * Pi / 180
+    val radLa2 = lat2 * Pi / 180
+
+    val dx = (radLo2 - radLo1) * Ed1
+    val dy = (radLa2 - radLa1) * Ec1
+    val dDeta = sqrt(dx * dx + dy * dy)
+    dDeta
+  }
 
   // 墨卡托转经纬度
   def Mercator2lonlat(x: Int, y: Int): (Double, Double) = {
@@ -64,14 +85,15 @@ object fingergis2 {
     var finger = ArrayBuffer[(String, Array[Array[String]])]()
     var bfirst2 = true
     // 根据主服务小区匹配指纹库中主服务小区相同的记录 文档中的步骤2
-    if(tag == "1"){
+    if("1" == "1"){
       scandata.foreach(x => {
         if(x(2) == "1"){
           fingerprint.foreach(y => {
             //            for(i <- 0 to (finger_line_max_num-1)){
+            var bfirst1 = true
             for(i <- 0 to (y._2.length-1)){
               //              println("y._2(i)="+y._2(i).mkString(","))
-              var bfirst1 = true
+              // 纹线信息 Array(标识(bcch|bsic), ta, ismell, rxlevsub, sum)
               if(y._2(i)(2)=="1" && y._2(i)(0)==x.head && bfirst1){
                 finger += y
                 bfirst1 = false
@@ -81,58 +103,97 @@ object fingergis2 {
         }
       })
     }
+
+    if(finger.size == 0)
+      println("finger size is zero !!!!!!!!!!!!!")
+
+    finger.foreach(x => println("mserverfinger = "+x._1))
+
     // 文档中步骤3,4,5
-    if(finger.size == 0){
-      println("!!!!!!!!!!!")
-      // 两个门限值
-      var seq_index = bseq_index
-      var diff_value = bdiff_value
-      while(seq_index <= finger_line_max_num && diff_value < 97 && finger.size == 0){
-        scandata.foreach(x =>{
-          if(finger.size == 0){
-            fingerprint.foreach(y => {
-              var bfirst2 = true
-              var index = 1
-              y._2.foreach(z => {
-                if(bfirst2 && z(3) != "" && x(3) != "" && z(0)==x.head && index <= seq_index && abs(z(3).toInt-x(3).toInt)<diff_value){
-                  finger += y
-                  index += 1
-                  bfirst2 = false
-                }
-              })
-            })
-          }
+//    if(finger.size == 0)
+    var finger1 = ArrayBuffer[(String, Array[Array[String]])]()
+
+    // 两个门限值
+    var seq_index = bseq_index
+    var diff_value = bdiff_value
+
+    scandata.foreach(x =>{
+      if(finger1.size == 0) {
+        fingerprint.foreach(y => {
+          var bfirst2 = true
+          var index = 1
+          y._2.foreach(z => {
+            if (bfirst2 && z(3) != "" && x(3) != "" && z(0) == x.head && index <= seq_index && abs(z(3).toFloat - x(3).toFloat) < diff_value) {
+              finger1 += y
+              bfirst2 = false
+            }
+            index += 1
+          })
         })
-        if(finger.size == 0){
-          seq_index += 1
-          diff_value += 2
-        }
       }
+    })
+    if(finger1.size == 0){
+      seq_index = 12
+      diff_value = 20
+      scandata.foreach(x => {
+        if (finger1.size == 0) {
+          fingerprint.foreach(y => {
+            var bfirst2 = true
+            var index = 1
+            y._2.foreach(z => {
+              if (bfirst2 && z(3) != "" && x(3) != "" && z(0) == x.head && index <= seq_index && abs(z(3).toFloat - x(3).toFloat) < diff_value) {
+                finger1 += y
+                bfirst2 = false
+              }
+              index += 1
+            })
+          })
+        }
+      })
     }
-    finger
+
+    if(finger1.size == 0)
+      println("finger1 size is zero !!!!!!!!!!!!!")
+
+    finger1.foreach(x => println("finger1="+x._1))
+
+    val mfinger = finger.toMap
+    val finalfinger = ArrayBuffer[(String, Array[Array[String]])]()
+    finger1.foreach{x =>
+      if(mfinger.contains(x._1))
+        finalfinger += x
+    }
+
+    finalfinger.foreach(x => println("finalfinger="+x._1))
+
+    if(finalfinger.size == 0)
+      finger1
+    else
+      finalfinger
+
   }
 
-  def getCorePoint(finger: ArrayBuffer[(String, Array[Array[String]])]): (Int, Int) = {
-    var px = 0
-    var py = 0
+  def getCorePoint(finger: ArrayBuffer[(String, Array[Array[String]])]): (Float, Float) = {
+    var px = 0f
+    var py = 0f
     finger.foreach(x => {
       val pxy = x._1.split("\\|", -1)
-      px += pxy(0).toInt
-      py += pxy(1).toInt
+      px += pxy(0).toFloat
+      py += pxy(1).toFloat
     })
     px /= finger.size
     py /= finger.size
     (px, py)
   }
 
-  def getDistance(p1: (Int, Int), p2: (Int, Int)): Double = {
+  def getDistance(p1: (Float, Float), p2: (Float, Float)): Double = {
     sqrt(pow(p1._1-p2._1,2)+pow(p1._2-p2._2,2))
   }
 
-  def filterByDistance(finger: ArrayBuffer[(String, Array[Array[String]])], point: (Int, Int)): ArrayBuffer[(String, Array[Array[String]], Double)] = {
+  def filterByDistance(finger: ArrayBuffer[(String, Array[Array[String]])], point: (Float, Float)): ArrayBuffer[(String, Array[Array[String]], Double)] = {
     val fingerD = finger.map(x => {
       val pxy = x._1.split("\\|", -1)
-      val d = getDistance((pxy(0).toInt,pxy(1).toInt), point)
+      val d = getDistance((pxy(0).toFloat,pxy(1).toFloat), point)
       (x._1, x._2, d)
     })
     val num = floor(finger.size * filterByDistance_percent).toInt
@@ -189,7 +250,7 @@ object fingergis2 {
     var deviation = sqrt(getVariance(scandata)) * sqrt(getVariance(finger))
     if(deviation < 0.0000001)
       deviation = 0.0001
-    val res = cov./:(0.0)(_+_) / cov.length / deviation
+    val res = cov./:(0.0)(_+_) / (cov.length-1) / deviation
     res
   }
 
@@ -208,12 +269,17 @@ object fingergis2 {
       val (cdata, cfinger) = getCommonByFlag(x._2, scandata)
       val sameFactor = cdata.size * 1.0 / min(x._2.length, scandata.size)
       val (ddata, dfinger) = listToArray(cfinger, cdata)
+//      println("cdata="+cdata.map(_.mkString(",")).mkString("$"))
+//      println("cfinger="+cfinger.map(_.mkString(",")).mkString("$"))
+//      println("ddata="+ddata.mkString(","))
+//      println("dfinger="+dfinger.mkString(","))
       val nSimilar = abs(getCorrcoef(dfinger, ddata))
       var res = -1.0
       flag match {
         case 1 => {
           // 平均绝对差
           res = getDifByRssi(dfinger, ddata)./:(0.0){_ + abs(_)} / dfinger.length
+          res /= sameFactor
           if(sameFactor < samefactor_limit)
             res += averdiff_offset
         }
@@ -223,6 +289,7 @@ object fingergis2 {
             res = getVariance(getDifByRssi(ddata, dfinger))
           else
             res = abs(getDifByRssi(ddata, dfinger)(0))
+          res /= sameFactor
           if(sameFactor < samefactor_limit)
             res += variance_offset
         }
@@ -238,10 +305,15 @@ object fingergis2 {
         //        }
         case _ => None
       }
+
+      println("id="+x._1+" samefactor="+sameFactor+"  nSimilar="+nSimilar+"  res="+res)
+
       (x._1, x._2, x._3, sameFactor, res, nSimilar)
     })
   }
 
+  // (用户, (公共信息, 定位信息))
+  // 公共信息: 时间,栅格,采样点  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
   def location(key: String, Iter: Iterable[(Array[String], ArrayBuffer[ArrayBuffer[String]])],
                fingerInfo: Array[(String, Array[Array[String]])]): String = {
     //    println("key="+key)
@@ -253,8 +325,8 @@ object fingergis2 {
       var sg = "-1|-1"
       // mr数据处理
       val scandata = x._2
-      val scandata1 = scandata.filter(rejectByRssi).sortBy(_(3)).reverse
-      //      println("scandata1=" + scandata1.map(x => x.mkString(",")).mkString("^"))
+      val scandata1 = scandata.filter(rejectByRssi).sortBy(_(3).toInt).reverse.slice(0, 7)
+      println("scandata1=" + scandata1.map(x => x.mkString(",")).mkString("^"))
       //      println("scandata1.size="+ scandata1.size)
       //      println("fingerInfo="+ fingerInfo(0)._1 + "," + fingerInfo(0)._2.map(_.mkString(",")).mkString("$"))
       // 指纹数据处理 !!!!scandata是有序的,根据rssi由强到弱
@@ -286,7 +358,7 @@ object fingergis2 {
             }
           }
           if (istwice_compare == 1 && sg != "-1|-1") {
-            val sdf = new SimpleDateFormat("yyyyMMddmmss")
+            val sdf = new SimpleDateFormat("yyyyMMddHHmmss")
             val nowtime = sdf.parse(x._1(0)).getTime
             if (0 == lasttime) {
               lasttime = nowtime
@@ -309,7 +381,11 @@ object fingergis2 {
           // 临时算距离
           val nxy = sg.split("\\|", -1)
           val sxy = x._1(1).split("\\|", -1)
-          val tmpd = sqrt(pow(nxy(0).toInt - sxy(0).toInt, 2) + pow(nxy(1).toInt - sxy(1).toInt, 2))
+//          val d = Mercator2lonlat(nxy(0).toInt*grip_size, nxy(1).toInt*grip_size)
+//          //          val tmpd = rint(sqrt(pow(d._1 - sxy(0).toDouble, 2) + pow(d._2 - sxy(1).toDouble, 2)))
+//          val tmpd = calc_distance(d._1, d._2, sxy(0).toDouble, sxy(1).toDouble)
+          val tmpd = 0
+          //          println("sg="+sg+"  sxy="+x._1(1)+"  d="+d + "   tmpd="+tmpd)
           Array[String](x._1(1), sg, tmpd.toString, x._1(2)).mkString(",")
         } else{
           "-1,-1"

@@ -1,7 +1,7 @@
 package cn.com.gis.tools.shanghai
 
 /**
- * Created by wangxy on 15-11-11.
+ * Created by wangxy on 15-11-16.
  */
 
 import cn.com.gis.utils.tRedisPutMap
@@ -11,7 +11,7 @@ import scala.collection.mutable.{ArrayBuffer, Map}
 
 import scala.math._
 
-object gsmGenFingerLib1 {
+object saveFingerLib1 {
 
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
@@ -81,7 +81,7 @@ object gsmGenFingerLib1 {
     }
   }
 
-  def inReduceProcess(sg: String, Iter: Iterable[Array[String]], fmap: Map[String, String]): Unit = {
+  def inReduceProcess(sg: String, Iter: Iterable[Array[String]]): String = {
     if(sg != "-1") {
       // 安标识将相同纹线信息合并平均
       var lineArr2 = ArrayBuffer[ArrayBuffer[String]]()
@@ -91,7 +91,7 @@ object gsmGenFingerLib1 {
         val mRsrp = x._2./:(0) { (x, y) => x + y(3).toInt } / sum
         // 如果有主小区存在 取主小区标识 (flag, ta, ismcell)
         lineArr1 ++= x._2.sortBy(_(2)).reverse.head.slice(0, 3)
-//        println("linearr1(0)="+x._2.sortBy(_(2)).reverse.head.slice(0, 3).mkString("$"))
+        //        println("linearr1(0)="+x._2.sortBy(_(2)).reverse.head.slice(0, 3).mkString("$"))
         lineArr1 += mRsrp.toString
         lineArr1 += sum.toString
         lineArr2 += lineArr1
@@ -101,24 +101,28 @@ object gsmGenFingerLib1 {
       // Array(标识(bcch|bsic), ta, ismell, rxlevsub, sum)
       val fingerInfo = lineArr2.filter(_(2) == "1")
       val neiInfo = lineArr2.filter(_(2) == "0").sortBy(_(3)).reverse
+      var fstr = ""
       if (fingerInfo.length >= finger_line_max_num) {
-        val fstr = fingerInfo.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
-//        val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
-//        fmap.put(sg, fstr)
+        fstr = fingerInfo.slice(0, finger_line_max_num).map(x => {sg + "," +x.mkString(",")}).mkString("/n")
+        //        val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
+        //        fmap.put(sg, fstr)
       } else {
-//        val n = finger_line_max_num - fingerInfo.length - neiInfo.length
+        //        val n = finger_line_max_num - fingerInfo.length - neiInfo.length
         fingerInfo ++= neiInfo.slice(0, finger_line_max_num - fingerInfo.length)
-//        for (i <- 0 to (n - 1)) {
-//          fingerInfo += ArrayBuffer(",,,,")
-//        }
-        val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
-        fmap.put(sg, fstr)
+        //        for (i <- 0 to (n - 1)) {
+        //          fingerInfo += ArrayBuffer(",,,,")
+        //        }
+        fstr = fingerInfo.map(x => {sg + "," +x.mkString(",")}).mkString("/n")
       }
+      fstr
+    }else{
+      "1"
     }
+
   }
 
   def main(args: Array[String]): Unit = {
-    if (args.length != 1) {
+    if (args.length != 2) {
       System.err.println("Usage: <in-file>")
       System.exit(1)
     }
@@ -128,13 +132,8 @@ object gsmGenFingerLib1 {
 
     val textRDD = sc.textFile(args(0))
 
-    tRedisPutMap.deltable(Finger_name)
-
-    textRDD.mapPartitions(Iter=> Iter.map(inMapProcess)).groupByKey().foreachPartition(Iter => {
-      val fmap = Map[String, String]()
-      Iter.foreach(x => inReduceProcess(x._1, x._2, fmap))
-      tRedisPutMap.putMap2Redis(Finger_name, fmap)
-      //      fmap.foreach(println)
-    })
+    textRDD.mapPartitions(Iter=> Iter.map(inMapProcess)).groupByKey().mapPartitions(Iter => {
+      Iter.map(x => inReduceProcess(x._1, x._2))
+    }).filter(_ != "1").saveAsTextFile(args(1))
   }
 }
