@@ -8,7 +8,7 @@ import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
-import cn.com.gis.etl.shanghai.function.fingergis4
+import cn.com.gis.etl.shanghai.function.fingergis5
 import com.utils.RedisUtils
 
 object zhiyaogis1 {
@@ -126,7 +126,7 @@ object zhiyaogis1 {
       //        (x._1, arr)
       //      }.toArray
       Iter.map{x =>
-        fingergis4.location(x._1, x._2, info.value)
+        fingergis5.location(x._1, x._2, info.value)
       }
     }
     result.saveAsTextFile(args(1))

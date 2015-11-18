@@ -100,18 +100,20 @@ object gsmGenFingerLib1 {
       // 优先保留主服务小区的, 再保留临区的
       // Array(标识(bcch|bsic), ta, ismell, rxlevsub, sum)
       val fingerInfo = lineArr2.filter(_(2) == "1")
-      val neiInfo = lineArr2.filter(_(2) == "0").sortBy(_(3)).reverse
+      val neiInfo = lineArr2.filter(_(2) == "0")
       if (fingerInfo.length >= finger_line_max_num) {
-        val fstr = fingerInfo.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
+        val fstr = fingerInfo.sortBy(_(3).toInt).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
 //        val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
 //        fmap.put(sg, fstr)
       } else {
 //        val n = finger_line_max_num - fingerInfo.length - neiInfo.length
-        fingerInfo ++= neiInfo.slice(0, finger_line_max_num - fingerInfo.length)
+//        fingerInfo ++= neiInfo.slice(0, finger_line_max_num - fingerInfo.length)
+        fingerInfo ++= neiInfo
+        val fstr = fingerInfo.sortBy(_(3).toInt).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
 //        for (i <- 0 to (n - 1)) {
 //          fingerInfo += ArrayBuffer(",,,,")
 //        }
-        val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
+//        val fstr = fingerInfo.map(_.mkString(",")).mkString("$")
         fmap.put(sg, fstr)
       }
     }
