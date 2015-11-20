@@ -7,7 +7,7 @@ package cn.com.gis.utils
 import com.utils.ConfigUtils
 import redis.clients.jedis.{Pipeline, Jedis, JedisPool, JedisPoolConfig}
 
-import scala.collection.mutable.Map
+//import scala.collection.mutable.Map
 
 object tRedisPutMap {
 

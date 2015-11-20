@@ -135,7 +135,7 @@ object gsmGenFingerLib1 {
     textRDD.mapPartitions(Iter=> Iter.map(inMapProcess)).groupByKey().foreachPartition(Iter => {
       val fmap = Map[String, String]()
       Iter.foreach(x => inReduceProcess(x._1, x._2, fmap))
-      tRedisPutMap.putMap2Redis(Finger_name, fmap)
+      tRedisPutMap.putMap2Redis(Finger_name, fmap.toMap)
       //      fmap.foreach(println)
     })
   }

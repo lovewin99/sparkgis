@@ -119,7 +119,7 @@ object GenNeiCell1 {
     RedisUtils.delTable("neiinfo1")
 
     RedisUtils.putMap2RedisTable("baseinfo1", Cbaseinfo)
-    tRedisPutMap.putMap2Redis("neiinfo1", Cneiinfo)
+    tRedisPutMap.putMap2Redis("neiinfo1", Cneiinfo.toMap)
 //    Cneiinfo.foreach(println)
 //    println("size = "+Cneiinfo.size)
 

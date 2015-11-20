@@ -45,7 +45,7 @@ object zhiyaofinger1 {
     textRDD.map(mapProcess).groupByKey().foreachPartition(Iter => {
       val fmap = Map[String, String]()
       Iter.foreach(x => reduceProcess(x._1, x._2, fmap))
-      tRedisPutMap.putMap2Redis(Finger_name, fmap)
+      tRedisPutMap.putMap2Redis(Finger_name, fmap.toMap)
     })
   }
 }
