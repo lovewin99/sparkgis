@@ -306,9 +306,9 @@ object shfinger1 {
               }
             }
             val tTime = x._1(0).replaceAll("[\\-. :]", "")
+            val sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS")
+            val nowtime = sdf.parse(tTime).getTime
             if (istwice_compare == 1 && sg != "-1|-1") {
-              val sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS")
-              val nowtime = sdf.parse(tTime).getTime
               if (0 == lasttime) {
                 lasttime = nowtime
                 osg = sg
@@ -344,7 +344,9 @@ object shfinger1 {
 //            val d = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
 //            //          val tmpd = rint(sqrt(pow(d._1 - sxy(0).toDouble, 2) + pow(d._2 - sxy(1).toDouble, 2)))
 //            val tmpd = calc_distance(d._1, d._2, sxy(0).toDouble, sxy(1).toDouble)
-            Array[String](tTime, key, fsg(0), fsg(1), flonlat._1.toString, flonlat._2.toString).mkString(",")
+            val sdf1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
+            val tTime1 = sdf1.format(nowtime)
+            Array[String](tTime1, key, fsg(0), fsg(1), flonlat._1.toString, flonlat._2.toString).mkString(",")
           } else {
             "-1,-1"
           }

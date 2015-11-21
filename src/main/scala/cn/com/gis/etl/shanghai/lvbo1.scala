@@ -85,7 +85,7 @@ object lvbo1 {
 
     val result = mapRdd.filter(_._1 != "-1").groupByKey().map{
       case (user, info) => {
-        val sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS")
+        val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
         val vlist = info.toList.sortBy(_(index_time))
         var fdata = ArrayBuffer[Array[String]]()
         var tdata = ArrayBuffer[Array[String]]()
