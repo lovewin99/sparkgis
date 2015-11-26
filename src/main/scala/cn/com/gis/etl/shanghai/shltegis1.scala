@@ -69,7 +69,7 @@ object shltegis1 {
   }
 
   // (用户, (公共信息, 定位信息))
-  // 公共信息: 时间,栅格,采样点  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
+  // 公共信息: 时间  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
   def inMapProcess(in: String, neiInfo: Map[String, String], rsrpInfo: Map[String, String], mInfo: Map[String, String]):
   (String, (Array[String], ArrayBuffer[ArrayBuffer[String]])) = {
     val strArr = in.split(",", -1)
@@ -133,7 +133,7 @@ object shltegis1 {
   }
 
   // (用户, (公共信息, 定位信息))
-  // 公共信息: 时间,栅格,采样点  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
+  // 公共信息: 时间  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
   def CombineUserInfo(imsi: String, Iter: Iterable[(Array[String], ArrayBuffer[ArrayBuffer[String]])], fingerLib: Map[String, String]): String = {
     val fingerLib1 = fingerLib.map{x =>
       val arr = x._2.split("\\$", -1).map{_.split(",", -1)}
