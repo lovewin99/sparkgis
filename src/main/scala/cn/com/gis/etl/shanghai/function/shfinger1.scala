@@ -275,7 +275,7 @@ object shfinger1 {
   }
 
   // (用户, (公共信息, 定位信息))
-  // 公共信息: 时间,栅格,采样点  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
+  // 公共信息: 时间  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
   def location(key: String, Iter: Array[(Array[String], ArrayBuffer[ArrayBuffer[String]])],
                fingerInfo: Array[(String, Array[Array[String]])]): String = {
 
