@@ -20,11 +20,9 @@ object parseMME {   // 列分隔符
 
     val mmeFile = sc.textFile("dsn/s1ap")
     val mmeData = mmeFile.map{
-      _ match {
         case mme(mmeUserId, mmeGroupId, mmeCode, startTime, "1") => (("","",""),("",""))
         case mme(mmeUserId, mmeGroupId, mmeCode, startTime, imsi) => ((mmeUserId, mmeGroupId,mmeCode), (startTime, imsi))
         case _ => (("","",""),("",""))
-      }
     }.filter(_ != (("","",""),("","")))
 
     val sortData = mmeData.groupByKey(100).mapPartitions{ iter =>

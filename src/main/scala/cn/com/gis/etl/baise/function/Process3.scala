@@ -384,7 +384,7 @@ object Process3 {
           case _ =>{
             //有临区信息
             main_cell.in_door_ match{
-              case 0 => {
+              case 1 => {
                 // 室内
                 val ll1 = GetInsideMRLonLat(main_cell)
                 (ll1._1, ll1._2, 3)

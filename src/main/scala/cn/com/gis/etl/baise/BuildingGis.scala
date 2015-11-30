@@ -38,26 +38,26 @@ object BuildingGis {
     //    Process.init
 
     //读取基础表
-    val cellinfo = RedisUtils.getResultMap("buildingbaseinfo")
+    val cellinfo = RedisUtils.getResultMap("baseinfo")
     cellinfo.foreach(e => {
       val c_info = new BStaticCellInfo
       val strArr = e._2.split("\t")
-      if (strArr.length == 12){
+      if (strArr.length == 13){
         c_info.cellid_ = e._1.toInt
         c_info.longitude_ = strArr(2).toDouble
         c_info.latitude_ = strArr(3).toDouble
-        c_info.freq_ = strArr(8).toInt
-        c_info.cell_pci_ = strArr(9).toInt
-        c_info.in_door_ = strArr(10).toInt
-        c_info.azimuth_ = strArr(11).toInt
-        c_info.bname = strArr(7)
+        c_info.freq_ = strArr(7).toInt
+        c_info.cell_pci_ = strArr(8).toInt
+        c_info.in_door_ = strArr(9).toInt
+        c_info.azimuth_ = if (strArr(10) == "" ) 0 else strArr(10).toInt
+        c_info.bname = ""
 
         tmpCellInfo.put(e._1.toInt, c_info)
       }
     })
 
     //读取临区表
-    val neiinfo = RedisUtils.getResultMap("buildingneiinfo")
+    val neiinfo = RedisUtils.getResultMap("neiinfo")
     neiinfo.foreach(e => {
       val key = e._1
       val value = e._2.toInt
@@ -137,8 +137,9 @@ object BuildingGis {
           val rsrp = xdr.serving_rsrp_
           val neirsrp = xdr.nei_rsrp_
           val cellid = xdr.cell_id_
-          Array[String](xdr.time_.toString, key, sgX.toString, sgY.toString, cellid.toString, rsrp.toString, neirsrp.toString, res._5.toString, res._4.toString, res._6).mkString(",")
+          val str = Array[String](xdr.time_.toString, key, sgX.toString, sgY.toString, cellid.toString, rsrp.toString, neirsrp.toString, res._5.toString, res._4.toString, res._6).mkString(",")
           //          time.toString + "|" + sgX.toString + "|" + sgY.toString + "|" + rsrp.toString + "|" + res._5
+          str
         }
       }
 
@@ -309,7 +310,7 @@ object BuildingGis {
 
   def locate_by_indoor(cell_id : Int): (Double, Double, Int, String) = {
     val cellinfo_ = CellInfo.getOrElse(cell_id, new BStaticCellInfo)
-    if (cellinfo_.in_door_ == 0) {
+    if (cellinfo_.in_door_ == 1) {
       (cellinfo_.longitude_, cellinfo_.latitude_, 100, cellinfo_.bname)
     } else{
       (-1, -1, -1, "")
@@ -320,7 +321,7 @@ object BuildingGis {
     val angle = aoa / 2       //aoa ta 没有ntohs
     val cellinfo_ = CellInfo.getOrElse(cell_id, new BStaticCellInfo)
 
-    if (aoa != -1 && angle < 360 && ta != -1 && ta < 2048 && cellinfo_.cellid_ != -1){
+    if (aoa != 0 && aoa != -1 && angle < 360 && ta != -1 && ta < 2048 && cellinfo_.cellid_ != -1){
       val radius = distance(ta)
       val radian = (360 - angle) * Pi / 180
       val x = cos(radian) * radius
@@ -378,7 +379,7 @@ object BuildingGis {
           case _ =>{
             //有临区信息
             main_cell.in_door_ match{
-              case 1 => {
+              case 0 => {
                 // 室内
                 val ll1 = GetInsideMRLonLat(main_cell)
                 (ll1._1, ll1._2, 3)

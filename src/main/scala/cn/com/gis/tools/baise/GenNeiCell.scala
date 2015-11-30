@@ -29,7 +29,7 @@ object GenNeiCell {
       strArr(0)(0) match {
         case '#' => None            // 忽略注释行
         case _ => {
-          if(strArr.length == 11){
+          if(strArr.length == 13){
             val c_info = new StaticCellInfo
             val enbid = strArr(0).toInt
             val cell_in_enb = strArr(1).toInt
@@ -39,7 +39,7 @@ object GenNeiCell {
             c_info.freq_ = strArr(7).toInt
             c_info.cell_pci_ = strArr(8).toInt
             c_info.in_door_ = strArr(9).toInt
-            c_info.azimuth_ = strArr(10).toInt
+            c_info.azimuth_ = if (strArr(10) == "")  0 else strArr(10).toInt
             val key = (c_info.cell_pci_ << 16) | c_info.freq_
             c_info.pci_freq = key
             CellInfo.put(c_info.cellid_, c_info)
@@ -104,14 +104,17 @@ object GenNeiCell {
 
     }
 
-    file2St("/home/wangxy/data/test08.txt")
+//    file2St("/home/wangxy/data/test08.txt")
+    // "/home/s/work/tescomm/玉溪/20151110工参2.csv"
+    val redisFile = if(args.length > 0) args(0) else "/home/s/work/tescomm/玉溪/baisegongcan.csv"
+    file2St(redisFile)
 
 
-    RedisUtils.delTable("baseinfo")
-    RedisUtils.delTable("neiinfo")
+    RedisUtils.delTable("baseinfo1")
+    RedisUtils.delTable("neiinfo1")
 
-    RedisUtils.putMap2RedisTable("baseinfo", Cbaseinfo)
-    RedisUtils.putMap2RedisTable("neiinfo", Cneiinfo)
+    RedisUtils.putMap2RedisTable("baseinfo1", Cbaseinfo)
+    RedisUtils.putMap2RedisTable("neiinfo1", Cneiinfo)
 
 //    CellInfo.foreach(e => println("key="+e._1+"     value="+e._2.longitude_))
 //    println("!!!!!!!!!!!!!")

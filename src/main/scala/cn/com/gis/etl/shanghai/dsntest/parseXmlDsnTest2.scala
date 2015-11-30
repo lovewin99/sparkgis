@@ -27,9 +27,9 @@ object parseXmlDsnTest2 {
     // and smr == allColumnsLab
     val c = (a \\ "measurement").filter(x => (x \ "smr" text) == allColumnsLab) \\ "object"
     c.map{ x =>
-      val mmeId      = (x \ "@MmeUeS1apId" text)
-      val mmeGroupId = (x \ "@MmeGroupId" text)
-      val mmeCode    = (x \ "@MmeCode" text)
+      val mmeId      = x \ "@MmeUeS1apId" text
+      val mmeGroupId = x \ "@MmeGroupId" text
+      val mmeCode    = x \ "@MmeCode" text
       val timeValue  = (x \ "@TimeStamp" text).replaceAll("(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2})\\.\\d+", "$1 $2")  // timestamp
       val eNBId      = (x \ "@id" text).split(":", 2)(0)
 
