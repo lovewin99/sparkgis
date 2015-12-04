@@ -1,16 +1,16 @@
 package cn.com.gis.etl.shanghai.function
 
-/**
- * Created by wangxy on 15-11-21.
- */
-
 import java.text.SimpleDateFormat
 
 import com.utils.ConfigUtils
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
+import cn.com.gis.tools.cooTranslate.lonlat2gkp
 
-object shfinger1 {
+/**
+ * Created by wangxy on 15-12-1.
+ */
+object shfinger1LonLat1 {
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
   val finger_line_max_num = prop.getOrElse("FINGER_LINE_MAX_NUM", "12").toInt
@@ -37,36 +37,36 @@ object shfinger1 {
   val averdiff_offset = prop.getOrElse("AVERDIFF_OFFSET", "30").toDouble
 
   // 计算两经纬度距离
-  def calc_distance(lon1 : Double, lat1 : Double, lon2 : Double, lat2 : Double) : Double={
-    val Rc = 6378137.00  // 赤道半径
-    val Rj = 6356725     // 极半径
-
-    val radLo1 = lon1 * Pi / 180
-    val radLa1 = lat1 * Pi / 180
-    val Ec1 = Rj + (Rc - Rj) * (90.0 - lat1) / 90.0
-    val Ed1 = Ec1 * cos(radLa1)
-
-    val radLo2 = lon2 * Pi / 180
-    val radLa2 = lat2 * Pi / 180
-
-    val dx = (radLo2 - radLo1) * Ed1
-    val dy = (radLa2 - radLa1) * Ec1
-    val dDeta = sqrt(dx * dx + dy * dy)
-    dDeta
-  }
-
-  // 墨卡托转经纬度
-  def Mercator2lonlat(x: Int, y: Int): (Double, Double) = {
-    val lon = x / 20037508.34 * 180
-    var lat = y / 20037508.34 * 180
-    lat = 180 / Pi * (2 * atan(exp(lat * Pi / 180)) - Pi / 2)
-    (lon, lat)
-  }
+//  def calc_distance(lon1 : Double, lat1 : Double, lon2 : Double, lat2 : Double) : Double={
+//    val Rc = 6378137.00  // 赤道半径
+//    val Rj = 6356725     // 极半径
+//
+//    val radLo1 = lon1 * Pi / 180
+//    val radLa1 = lat1 * Pi / 180
+//    val Ec1 = Rj + (Rc - Rj) * (90.0 - lat1) / 90.0
+//    val Ed1 = Ec1 * cos(radLa1)
+//
+//    val radLo2 = lon2 * Pi / 180
+//    val radLa2 = lat2 * Pi / 180
+//
+//    val dx = (radLo2 - radLo1) * Ed1
+//    val dy = (radLa2 - radLa1) * Ec1
+//    val dDeta = sqrt(dx * dx + dy * dy)
+//    dDeta
+//  }
+//
+//  // 墨卡托转经纬度
+//  def Mercator2lonlat(x: Int, y: Int): (Double, Double) = {
+//    val lon = x / 20037508.34 * 180
+//    var lat = y / 20037508.34 * 180
+//    lat = 180 / Pi * (2 * atan(exp(lat * Pi / 180)) - Pi / 2)
+//    (lon, lat)
+//  }
 
 
   // 电频值在范围内
   def rejectByRssi(info: ArrayBuffer[String]): Boolean = {
-    info(3) != "" && info(3).toInt >= rssi_downlimit && info(3).toInt <= rssi_uplimit
+    info(3) != "" && info(3).toDouble >= rssi_downlimit && info(3).toDouble <= rssi_uplimit
   }
 
   // !!!!! 调这个函数时scandata是有序的,根据rssi由强到弱
@@ -137,12 +137,19 @@ object shfinger1 {
       })
     }
 
+    if(finger1.size == 0)
+      println("finger1 size is zero !!!!!!!!!!!!!")
+
+    finger1.foreach(x => println("finger1="+x._2(0)(5)))
+
     val mfinger = finger.toMap
     val finalfinger = ArrayBuffer[(String, Array[Array[String]])]()
     finger1.foreach{x =>
       if(mfinger.contains(x._1))
         finalfinger += x
     }
+
+    finalfinger.foreach(x => println("finalfinger="+x._2(0)(5)))
 
     if(finalfinger.size == 0)
       finger1
@@ -189,6 +196,8 @@ object shfinger1 {
         }
       })
     })
+    println("cdata="+cdata.map(_.mkString(",")).mkString("&"))
+    println("cfinger="+cfinger.map(_.mkString(",")).mkString("&"))
     (cdata, cfinger)
   }
 
@@ -245,6 +254,10 @@ object shfinger1 {
       val (cdata, cfinger) = getCommonByFlag(x._2, scandata)
       val sameFactor = cdata.size * 1.0 / min(x._2.length, scandata.size)
       val (ddata, dfinger) = listToArray(cfinger, cdata)
+//      println("cdata="+cdata.map(_.mkString(",")).mkString("$"))
+//      println("cfinger="+cfinger.map(_.mkString(",")).mkString("$"))
+//      println("ddata="+ddata.mkString(","))
+//      println("dfinger="+dfinger.mkString(","))
       val nSimilar = getCorrcoef(dfinger, ddata)
       var res = -1.0
       flag match {
@@ -268,7 +281,7 @@ object shfinger1 {
         case _ => None
       }
 
-      //      println("id="+x._1+" samefactor="+sameFactor+"  nSimilar="+nSimilar+"  res="+res)
+      println("id="+x._2(0)(5)+" samefactor="+sameFactor+"  nSimilar="+nSimilar+"  res="+res)
 
       (x._1, x._2, x._3, sameFactor, res, nSimilar)
     })
@@ -281,13 +294,13 @@ object shfinger1 {
 
     var lasttime = 0L
     var osg = "-1|-1"
-//    val strkankan = Iter.map{x => x._2.map{y => y.mkString("$").mkString("  ,")}}.mkString("\n")
+    //    val strkankan = Iter.map{x => x._2.map{y => y.mkString("$").mkString("  ,")}}.mkString("\n")
     Iter.sortBy(_._1(0)).map(x => {
       var sg = "-1|-1"
       // mr数据处理
       val scandata = x._2
       val scandata1 = scandata.filter(rejectByRssi).sortBy(_(3).toInt).reverse.slice(0, 7)
-      if (scandata1.length >= 2) {
+      if (scandata1.length >= 3) {
         // 指纹数据处理 !!!!scandata是有序的,根据rssi由强到弱
         val finger = getCandidateFinger(fingerInfo, scandata1, isfilter_by_mcell)
         if (finger.size != 0 && scandata1.size != 0) {
@@ -308,6 +321,7 @@ object shfinger1 {
             val tTime = x._1(0).replaceAll("[\\-. :]", "")
             val sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS")
             val nowtime = sdf.parse(tTime).getTime
+
             if (istwice_compare == 1 && sg != "-1|-1") {
               if (0 == lasttime) {
                 lasttime = nowtime
@@ -318,15 +332,16 @@ object shfinger1 {
                   //var (nx, ny) = ("-1", "-1")
                   val nxy = sg.split("\\|", -1)
                   val oxy = osg.split("\\|", -1)
-                  val nlonlat = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
-                  val olonlat = Mercator2lonlat(oxy(0).toInt * grip_size, oxy(1).toInt * grip_size)
-//                  println(s"nlonlat=$nlonlat   olonlat=$olonlat")
-                  val d = calc_distance(olonlat._1, olonlat._2, nlonlat._1, nlonlat._2)
+                  val d = sqrt(pow(nxy(0).toDouble-oxy(0).toDouble,2)+pow(nxy(1).toDouble-oxy(1).toDouble,2))
+//                  val nlonlat = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
+//                  val olonlat = Mercator2lonlat(oxy(0).toInt * grip_size, oxy(1).toInt * grip_size)
+                  //                  println(s"nlonlat=$nlonlat   olonlat=$olonlat")
+//                  val d = calc_distance(olonlat._1, olonlat._2, nlonlat._1, nlonlat._2)
                   if (d > twicedistance_limit) {
-//                    println(s"sg=$sg  osg=$osg d=$d")
-                    val (fx, fy) = (rint((nxy(0).toLong + oxy(0).toLong) / 2).toLong.toString, rint((nxy(1).toLong + oxy(1).toLong) / 2).toLong.toString)
+                    //                    println(s"sg=$sg  osg=$osg d=$d")
+                    val (fx, fy) = (((nxy(0).toDouble + oxy(0).toDouble) / 2).toString, ((nxy(1).toDouble + oxy(1).toDouble) / 2).toString)
                     sg = Array[String](fx, fy).mkString("|")
-//                    println(s"nsg=$sg  osg=$osg")
+                    //                    println(s"nsg=$sg  osg=$osg")
                     osg = sg
                   } else {
                     osg = sg
@@ -339,17 +354,16 @@ object shfinger1 {
             }
 
             val fsg = sg.split("\\|", -1)
-            val flonlat = Mercator2lonlat(fsg(0).toInt * grip_size, fsg(1).toInt * grip_size)
+            val srcgkp = lonlat2gkp(x._1(1).toDouble, x._1(2).toDouble, 121.0)
+            val tmpd = sqrt(pow(fsg(0).toDouble-srcgkp._1,2)+pow(fsg(1).toDouble-srcgkp._2,2))
+//            val flonlat = Mercator2lonlat(fsg(0).toInt * grip_size, fsg(1).toInt * grip_size)
 
             // 临时算距离
-//            val nxy = sg.split("\\|", -1)
-//            val sxy = x._1(1).split("\\|", -1)
-//            val d = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
-//            //          val tmpd = rint(sqrt(pow(d._1 - sxy(0).toDouble, 2) + pow(d._2 - sxy(1).toDouble, 2)))
-//            val tmpd = calc_distance(d._1, d._2, sxy(0).toDouble, sxy(1).toDouble)
+//            val tmpd = calc_distance(x._1(1).toDouble, x._1(2).toDouble, flonlat._1, flonlat._2)
+
             val sdf1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
             val tTime1 = sdf1.format(nowtime)
-            Array[String](tTime1, key, fsg(0), fsg(1), flonlat._1.toString, flonlat._2.toString).mkString(",")
+            Array[String](tTime1, key, fsg(0), fsg(1), srcgkp._1.toString, srcgkp._2.toString, x._1(1), x._1(2), tmpd.toString).mkString(",")
           } else {
             "-1,-1"
           }

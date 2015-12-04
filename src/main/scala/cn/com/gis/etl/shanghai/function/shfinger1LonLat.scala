@@ -1,16 +1,15 @@
 package cn.com.gis.etl.shanghai.function
 
-/**
- * Created by wangxy on 15-11-21.
- */
-
 import java.text.SimpleDateFormat
 
 import com.utils.ConfigUtils
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
 
-object shfinger1 {
+/**
+ * Created by wangxy on 15-11-26.
+ */
+object shfinger1LonLat {
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
   val finger_line_max_num = prop.getOrElse("FINGER_LINE_MAX_NUM", "12").toInt
@@ -281,7 +280,7 @@ object shfinger1 {
 
     var lasttime = 0L
     var osg = "-1|-1"
-//    val strkankan = Iter.map{x => x._2.map{y => y.mkString("$").mkString("  ,")}}.mkString("\n")
+    //    val strkankan = Iter.map{x => x._2.map{y => y.mkString("$").mkString("  ,")}}.mkString("\n")
     Iter.sortBy(_._1(0)).map(x => {
       var sg = "-1|-1"
       // mr数据处理
@@ -308,6 +307,7 @@ object shfinger1 {
             val tTime = x._1(0).replaceAll("[\\-. :]", "")
             val sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS")
             val nowtime = sdf.parse(tTime).getTime
+
             if (istwice_compare == 1 && sg != "-1|-1") {
               if (0 == lasttime) {
                 lasttime = nowtime
@@ -320,13 +320,13 @@ object shfinger1 {
                   val oxy = osg.split("\\|", -1)
                   val nlonlat = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
                   val olonlat = Mercator2lonlat(oxy(0).toInt * grip_size, oxy(1).toInt * grip_size)
-//                  println(s"nlonlat=$nlonlat   olonlat=$olonlat")
+                  //                  println(s"nlonlat=$nlonlat   olonlat=$olonlat")
                   val d = calc_distance(olonlat._1, olonlat._2, nlonlat._1, nlonlat._2)
                   if (d > twicedistance_limit) {
-//                    println(s"sg=$sg  osg=$osg d=$d")
+                    //                    println(s"sg=$sg  osg=$osg d=$d")
                     val (fx, fy) = (rint((nxy(0).toLong + oxy(0).toLong) / 2).toLong.toString, rint((nxy(1).toLong + oxy(1).toLong) / 2).toLong.toString)
                     sg = Array[String](fx, fy).mkString("|")
-//                    println(s"nsg=$sg  osg=$osg")
+                    //                    println(s"nsg=$sg  osg=$osg")
                     osg = sg
                   } else {
                     osg = sg
@@ -342,14 +342,11 @@ object shfinger1 {
             val flonlat = Mercator2lonlat(fsg(0).toInt * grip_size, fsg(1).toInt * grip_size)
 
             // 临时算距离
-//            val nxy = sg.split("\\|", -1)
-//            val sxy = x._1(1).split("\\|", -1)
-//            val d = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
-//            //          val tmpd = rint(sqrt(pow(d._1 - sxy(0).toDouble, 2) + pow(d._2 - sxy(1).toDouble, 2)))
-//            val tmpd = calc_distance(d._1, d._2, sxy(0).toDouble, sxy(1).toDouble)
+            val tmpd = calc_distance(x._1(1).toDouble, x._1(2).toDouble, flonlat._1, flonlat._2)
+
             val sdf1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
             val tTime1 = sdf1.format(nowtime)
-            Array[String](tTime1, key, fsg(0), fsg(1), flonlat._1.toString, flonlat._2.toString).mkString(",")
+            Array[String](tTime1, key, fsg(0), fsg(1), flonlat._1.toString, flonlat._2.toString, x._1(1), x._1(2), tmpd.toString).mkString(",")
           } else {
             "-1,-1"
           }

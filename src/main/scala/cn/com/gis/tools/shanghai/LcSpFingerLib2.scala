@@ -8,11 +8,12 @@ import scala.collection.immutable.{Map =>imMap}
 import scala.io.Source
 import scala.math._
 import com.utils.{RedisUtils, ConfigUtils}
+import cn.com.gis.tools.cooTranslate.lonlat2gkp
 
 /**
- * Created by wangxy on 15-11-20.
+ * Created by wangxy on 15-11-30.
  */
-object LcSpFingerLib1 {
+object LcSpFingerLib2 {
 
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
@@ -53,6 +54,23 @@ object LcSpFingerLib1 {
   val ee = 0.00669342162296594323
   val aM = 6378245.0
 
+  // 中央经线
+  val medien = 121.0
+//  val x = 3420252.5173054
+//  val y = 556413.619816685
+  val x = 3420252.5173054
+  val y = 556413.619816685
+
+  //  val x = 3420252.0
+//  val y = 556413.0
+
+  // 划分栅格
+  def gkp2sg(xsrc: Double, ysrc: Double): (Double, Double) = {
+    val xdes = x + rint((xsrc - x) / grip_size) * grip_size
+    val ydes = y + rint((ysrc - y) / grip_size) * grip_size
+    (xdes, ydes)
+  }
+
   //*******************************************************/
   // 地球坐标转火星坐标
   def outOfChina(lon : Double, lat : Double) : Boolean ={
@@ -75,25 +93,28 @@ object LcSpFingerLib1 {
   }
 
   // 也是地球坐标转火星坐标 wgs gcj
-  def wgsTOgcj(wgLon : Double, wgLat : Double) : (Double, Double)={
-    if(outOfChina(wgLon, wgLat)){
-      (wgLon, wgLat)
-    }else{
-      var dLat = transformLat(wgLon - 105.0, wgLat - 35.0)
-      var dLon = transformLon(wgLon - 105.0, wgLat - 35.0)
-      val radLat = wgLat / 180.0 * Pi
-      var magic = sin(radLat)
-      magic = 1 - ee * magic * magic
-      val sqrtMagic = sqrt(magic)
-      dLat = (dLat * 180.0) / ((aM * (1 - ee)) / (magic * sqrtMagic) * Pi)
-      dLon = (dLon * 180.0) / (aM / sqrtMagic * cos(radLat) * Pi)
-      val mgLat = wgLat + dLat
-      val mgLon = wgLon + dLon
-      (mgLon, mgLat)
-    }
-  }
+//  def wgsTOgcj(wgLon : Double, wgLat : Double) : (Double, Double)={
+//    if(outOfChina(wgLon, wgLat)){
+//      (wgLon, wgLat)
+//    }else{
+//      var dLat = transformLat(wgLon - 105.0, wgLat - 35.0)
+//      var dLon = transformLon(wgLon - 105.0, wgLat - 35.0)
+//      val radLat = wgLat / 180.0 * Pi
+//      var magic = sin(radLat)
+//      magic = 1 - ee * magic * magic
+//      val sqrtMagic = sqrt(magic)
+//      dLat = (dLat * 180.0) / ((aM * (1 - ee)) / (magic * sqrtMagic) * Pi)
+//      dLon = (dLon * 180.0) / (aM / sqrtMagic * cos(radLat) * Pi)
+//      val mgLat = wgLat + dLat
+//      val mgLon = wgLon + dLon
+//      (mgLon, mgLat)
+//    }
+//  }
 
   //*******************************************************/
+  def wgsTOgcj(wgLon : Double, wgLat : Double) : (Double, Double)={
+    (wgLon, wgLat)
+  }
 
   //经纬度转墨卡托
   def lonLat2Mercator(lon : Double, lat : Double) : (Double, Double) = {
@@ -124,7 +145,7 @@ object LcSpFingerLib1 {
 
   // 电频值在范围内
   def rejectByRssi(info: String): Boolean = {
-    info != "" && info.toDouble.toInt >= rssi_downlimit && info.toDouble.toInt <= rssi_uplimit
+    info != "" && info.toDouble >= rssi_downlimit && info.toDouble <= rssi_uplimit
   }
 
   // key:(sgx, sgy) value:(eNB, ta, ismcell, rsrp, isluce)
@@ -163,11 +184,18 @@ object LcSpFingerLib1 {
           // 如果没有取到合适的eNB则过滤此条纹线
           ("", ("", "", "", "", ""))
         }else{
-          val (mx, my) = lonLat2Mercator(hlon, hlat)
-          val sgx = rint(mx / grip_size).toLong
-          val sgy = rint(my / grip_size).toLong
-          val sg = sgx + "|" +sgy
+          val gxy = lonlat2gkp(hlon, hlat, medien)
+//          val sgx = rint(gxy._1 / grip_size).toLong
+//          val sgy = rint(gxy._2 / grip_size).toLong
+//          val sg = sgx + "|" +sgy
+          val sgxy = gkp2sg(gxy._1, gxy._2)
+          val sg = sgxy._1 + "|" +sgxy._2
+//          val (mx, my) = lonLat2Mercator(hlon, hlat)
+//          val sgx = rint(mx / grip_size).toLong
+//          val sgy = rint(my / grip_size).toLong
+//          val sg = sgx + "|" +sgy
           // key:(sgx, sgy) value:(eNB, ta, ismcell, rsrp)
+
           (sg, (eNB, ta, ismcell, rsrp, isluceinfo))
         }
       }
@@ -185,9 +213,10 @@ object LcSpFingerLib1 {
       val (hlon, hlat) = wgsTOgcj(lon, lat)
       val pci_freq = strArr(sppci_index) + "|" + strArr(spfreq_index)
       val ta = "0"
-      val rsrp = if(strArr(sprsrp_index) != "") strArr(sprsrp_index).toDouble.toInt.toString else ""
+      val rsrp = if(strArr(sprsrp_index) != "") strArr(sprsrp_index) else ""
       val ismcell = "0"
-      if("" == rsrp || rsrp.toInt < -140 || rsrp.toInt >0){
+      var tmpd = 1000000.0
+      if("" == rsrp || rsrp.toDouble < -140.0 || rsrp.toDouble >0.0){
         // 如果电频值为空或者超限 则去除这条数据
         ("", ("", "", "", "", ""))
       }else{
@@ -195,7 +224,7 @@ object LcSpFingerLib1 {
         neiMap.get(pci_freq) match{
           case None => None
           case Some(info) => {
-            var tmpd = 1000000.0
+            //var tmpd = 1000000.0
             info.split(",", -1).map(_.split("\\|", -1)).foreach{
               case Array(teNB, tlon, tlat) => {
                 // 找最近站 并小于规定距离
@@ -212,11 +241,18 @@ object LcSpFingerLib1 {
           // 如果没有取到合适的eNB则过滤此条纹线
           ("", ("", "", "", "", ""))
         }else{
-          val (mx, my) = lonLat2Mercator(hlon, hlat)
-          val sgx = rint(mx / grip_size).toLong
-          val sgy = rint(my / grip_size).toLong
-          val sg = sgx + "|" +sgy
+          val gxy = lonlat2gkp(hlon, hlat, medien)
+//          val sgx = rint(gxy._1 / grip_size).toLong
+//          val sgy = rint(gxy._2 / grip_size).toLong
+//          val sg = sgx + "|" +sgy
+          val sgxy = gkp2sg(gxy._1, gxy._2)
+          val sg = sgxy._1 + "|" +sgxy._2
+//          val (mx, my) = lonLat2Mercator(hlon, hlat)
+//          val sgx = rint(mx / grip_size).toLong
+//          val sgy = rint(my / grip_size).toLong
+//          val sg = sgx + "|" +sgy
           // key:(sgx, sgy) value:(eNB, ta, ismcell, rsrp)
+
           (sg, (eNB, ta, ismcell, rsrp, isspinfo))
         }
       }
@@ -233,12 +269,12 @@ object LcSpFingerLib1 {
       val fingerlineArr = v1._2.groupBy(_._1).map{v2 =>
         // v2._2: Array[(eNB, ta, ismcell, rsrp, isluce)] 将路测或扫频的信息按照相同eNB合并
         val sum = v2._2.length
-        val mRsrp = v2._2./:(0) {(x, y) => x + y._4.toInt} / sum
+        val mRsrp = v2._2./:(0.0) {(x, y) => x + y._4.toDouble} / sum
         // 如果有主小区存在 取主小区标识 (flag, ta, ismcell)
         val ismcell = v2._2.sortBy(_._3).reverse.head._3
         val isluce = v2._2.head._5
         val ta = v2._2.head._2
-        (v2._1, ta, ismcell, mRsrp.toString, isluce)
+        (v2._1, ta, ismcell, mRsrp.toString, isluce, sum)
       }.toArray
       (v1._1, fingerlineArr)
     }
@@ -248,12 +284,12 @@ object LcSpFingerLib1 {
         var fArr = ArrayBuffer[Array[String]]()
         if(lcSpMap.head._1 == isspinfo){
           val value = lcSpMap.head._2.foreach{
-            case (eNB, ta, ismcell, rsrp, isluce) => {
-              var nrsrp = rsrp.toDouble.toInt
+            case (eNB, ta, ismcell, rsrp, isluce, sum) => {
+              var nrsrp = rsrp.toDouble
               if(lcSpMap.head._1 == isspinfo)
-                nrsrp -= 8
+                nrsrp -= 8.0
               if(rejectByRssi(nrsrp.toString)){
-                fArr += Array[String](eNB, ta, ismcell, nrsrp.toString)
+                fArr += Array[String](eNB, ta, ismcell, nrsrp.toString, sum.toString)
               }
             }
           }
@@ -263,14 +299,16 @@ object LcSpFingerLib1 {
             val fingerInfo = fArr.filter(_(2) == "1")
             val neiInfo = fArr.filter(_(2) == "0")
             if (fingerInfo.length >= finger_line_max_num) {
-              val fstr = fingerInfo.sortBy(_(3).toInt).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
+              val fstr = fingerInfo.sortBy(_(3).toDouble).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
               fmap.put(key, fstr)
             } else {
               fingerInfo ++= neiInfo
-              val fstr = fingerInfo.sortBy(_(3).toInt).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
+              val fstr = fingerInfo.sortBy(_(3).toDouble).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
               fmap.put(key, fstr)
             }
           }
+        }else{
+//          println(s"key = $key")
         }
       }
       case 2 => {
@@ -283,21 +321,21 @@ object LcSpFingerLib1 {
         var spExitArr = ArrayBuffer[String]()
         if(lcArr.length != 0 || spArr.length != 0){
           lcArr.foreach{
-            case (lceNB, lcta, lcismcell, lcrsrp, lcisluce) =>{
+            case (lceNB, lcta, lcismcell, lcrsrp, lcisluce, sum) =>{
               if(rejectByRssi(lcrsrp)){
-                fArr += Array[String](lceNB, lcta, lcismcell, lcrsrp.toDouble.toInt.toString)
+                fArr += Array[String](lceNB, lcta, lcismcell, lcrsrp.toDouble.toString, sum.toString)
               }
               spArr.foreach{
-                case (speNB, spta, spismcell, sprsrp, spisluce) =>{
+                case (speNB, spta, spismcell, sprsrp, spisluce, sum1) =>{
                   if(rejectByRssi(lcrsrp)){
                     if(lceNB == speNB){
-                      vxiuzheng += abs(lcrsrp.toInt - sprsrp.toInt)
+                      vxiuzheng += abs(lcrsrp.toDouble - sprsrp.toDouble)
                       num += 1
                       spExitArr += speNB
                     }
                   }else{
                     if(lceNB == speNB){
-                      vxiuzheng += abs(lcrsrp.toInt - sprsrp.toInt)
+                      vxiuzheng += abs(lcrsrp.toDouble - sprsrp.toDouble)
                       num += 1
                     }
                   }
@@ -310,10 +348,10 @@ object LcSpFingerLib1 {
           spExitArr.foreach(x => spArr = spArr.filter(_._1 != x))
 
           spArr.foreach{
-            case (speNB, spta, spismcell, sprsrp, spisluce) => {
-              val frsrp = sprsrp.toInt - mxiuzheng
+            case (speNB, spta, spismcell, sprsrp, spisluce, sum) => {
+              val frsrp = sprsrp.toDouble - mxiuzheng
               if(rejectByRssi(frsrp.toString)){
-                fArr += Array[String](speNB, spta, spismcell, frsrp.toInt.toString)
+                fArr += Array[String](speNB, spta, spismcell, frsrp.toString, sum.toString)
               }
             }
           }
@@ -323,11 +361,11 @@ object LcSpFingerLib1 {
             val fingerInfo = fArr.filter(_(2) == "1")
             val neiInfo = fArr.filter(_(2) == "0")
             if (fingerInfo.length >= finger_line_max_num) {
-              val fstr = fingerInfo.sortBy(_(3).toDouble.toInt).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
+              val fstr = fingerInfo.sortBy(_(3).toDouble).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
               fmap.put(key, fstr)
             } else {
               fingerInfo ++= neiInfo
-              val fstr = fingerInfo.sortBy(_(3).toDouble.toInt).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
+              val fstr = fingerInfo.sortBy(_(3).toDouble).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
               fmap.put(key, fstr)
             }
           }
@@ -335,36 +373,6 @@ object LcSpFingerLib1 {
       }
     }
   }
-
-  def luceReduce(sg: String, Iter: Iterable[Array[String]], fmap: Map[String, String]): Unit = {
-    if(sg != "") {
-      // 安标识将相同纹线信息合并平均
-      var lineArr2 = ArrayBuffer[ArrayBuffer[String]]()
-      Iter.toList.groupBy(_(0)).foreach(x => {
-        var lineArr1 = ArrayBuffer[String]()
-        val sum = x._2.size
-        val mRsrp = x._2./:(0) { (x, y) => x + y(3).toInt } / sum
-        // 如果有主小区存在 取主小区标识 (flag, ta, ismcell)
-        lineArr1 ++= x._2.sortBy(_(2)).reverse.head.slice(0, 3)
-        lineArr1 += mRsrp.toString
-        lineArr1 += sum.toString
-        lineArr2 += lineArr1
-      })
-
-      // 优先保留主服务小区的, 再保留临区的
-      // Array(标识(bcch|bsic), ta, ismell, rxlevsub, sum)
-      val fingerInfo = lineArr2.filter(_(2) == "1")
-      val neiInfo = lineArr2.filter(_(2) == "0")
-      if (fingerInfo.length >= finger_line_max_num) {
-        val fstr = fingerInfo.sortBy(_(3).toInt).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
-      } else {
-        fingerInfo ++= neiInfo
-        val fstr = fingerInfo.sortBy(_(3).toInt).reverse.slice(0, finger_line_max_num).map(_.mkString(",")).mkString("$")
-        fmap.put(sg, fstr)
-      }
-    }
-  }
-
 
   def main(args: Array[String]): Unit = {
     if (args.length != 2) {

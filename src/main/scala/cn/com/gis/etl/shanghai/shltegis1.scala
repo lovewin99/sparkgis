@@ -106,7 +106,7 @@ object shltegis1 {
                       case Array(teNB, tlon, tlat) => {
                         // 找最近站 并小于规定距离
                         val d = calc_distance(tlon.toDouble, tlat.toDouble, lonlat(0).toDouble, lonlat(1).toDouble)
-                        if(d < dis_limit || d < tmpd){
+                        if(d < dis_limit && d < tmpd){
                           neNB = teNB
                           tmpd = d
                         }

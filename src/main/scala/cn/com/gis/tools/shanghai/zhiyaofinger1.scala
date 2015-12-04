@@ -9,13 +9,14 @@ import scala.collection.mutable.Map
  * Created by wangxy on 15-11-16.
  */
 object zhiyaofinger1 {
-  val Finger_name = "gsmFingerLib1"
+  val Finger_name = "shfingerlib1"
 
   def mapProcess(in: String): (String, Array[String]) = {
     val strArr = in.split(",", -1)
     if(strArr.length == 7){
       val sg = strArr.slice(1,3).mkString("|")
-      val value = Array[String](strArr(3), "0", strArr(6), strArr(4), strArr(5))
+      val flag = Array[String](strArr(3).slice(0,6),"-",strArr(3).slice(7,9)).mkString("")
+      val value = Array[String](flag, "0", strArr(6), strArr(4), strArr(5), strArr(0))
       (sg, value)
     }else {
       ("-1", Array[String]())
@@ -25,7 +26,7 @@ object zhiyaofinger1 {
   // 输出(x|y, ta, ismcell, rsrp, num)
   def reduceProcess(key: String, Iter: Iterable[Array[String]], fmap: Map[String, String]): Unit = {
     if(key != "-1"){
-      val value = Iter.toList.sortBy(_(3).toInt).reverseMap(_.mkString(",")).mkString("$")
+      val value = Iter.toList.sortBy(_(3).toDouble).reverseMap(_.mkString(",")).mkString("$")
       fmap.put(key, value)
     }
   }

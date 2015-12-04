@@ -1,9 +1,5 @@
 package cn.com.gis.etl.shanghai
 
-/**
- * Created by wangxy on 15-11-21.
- */
-
 import java.text.SimpleDateFormat
 
 import com.utils.ConfigUtils
@@ -11,11 +7,13 @@ import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
-import cn.com.gis.etl.shanghai.function.shfinger1
+import cn.com.gis.etl.shanghai.function.shfinger1LonLat
 import com.utils.RedisUtils
 
-object shlucegis1 {
-
+/**
+ * Created by wangxy on 15-11-26.
+ */
+object shlucegisLonLat {
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
   val finger_line_max_num = prop.getOrElse("FINGER_LINE_MAX_NUM", "12").toInt
@@ -36,12 +34,16 @@ object shlucegis1 {
   val dis_limit = 3000.0
 
   //数据最小长度(无临区情况)
-  val mrmin_length = 5
+  val mrmin_length = 7
   val imsi_index = 0
   val time_index = 1
   val eNB_index = 2
   val ta_index = 3
   val rsrp_index = 4
+  // 为计算误差加路测数据经纬度
+  val lon_index = 5
+  val lat_index = 6
+
 
   // 临区信息相对位置
   // 临区信息长度
@@ -61,6 +63,54 @@ object shlucegis1 {
   val lcrsrp_index = 9
   val lcismcell_index = 10
 
+  val ee = 0.00669342162296594323
+  val aM = 6378245.0
+
+  //*******************************************************/
+  // 地球坐标转火星坐标
+  def outOfChina(lon : Double, lat : Double) : Boolean ={
+    lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271
+  }
+
+  def transformLat(x : Double, y : Double) : Double={
+    var ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * sqrt(abs(x))
+    ret += (20.0 * sin(6.0 * x * Pi) + 20.0 * sin(2.0 * x * Pi)) * 2.0 / 3.0
+    ret += (160.0 * sin(y / 12.0 * Pi) + 320 * sin(y * Pi / 30.0)) * 2.0 / 3.0
+    ret
+  }
+
+  def transformLon(x : Double, y : Double) : Double={
+    var ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * sqrt(abs(x))
+    ret += (20.0 * sin(6.0 * x * Pi) + 20.0 * sin(2.0 * x * Pi)) * 2.0 / 3.0
+    ret += (20.0 * sin(x * Pi) + 40.0 * sin(x / 3.0 * Pi)) * 2.0 / 3.0
+    ret += (150.0 * sin(x / 12.0 * Pi) + 300.0 * sin(x / 30.0 * Pi)) * 2.0 / 3.0
+    ret
+  }
+
+  // 也是地球坐标转火星坐标 wgs gcj
+  def wgsTOgcj(wgLon : Double, wgLat : Double) : (Double, Double)={
+    if(outOfChina(wgLon, wgLat)){
+      (wgLon, wgLat)
+    }else{
+      var dLat = transformLat(wgLon - 105.0, wgLat - 35.0)
+      var dLon = transformLon(wgLon - 105.0, wgLat - 35.0)
+      val radLat = wgLat / 180.0 * Pi
+      var magic = sin(radLat)
+      magic = 1 - ee * magic * magic
+      val sqrtMagic = sqrt(magic)
+      dLat = (dLat * 180.0) / ((aM * (1 - ee)) / (magic * sqrtMagic) * Pi)
+      dLon = (dLon * 180.0) / (aM / sqrtMagic * cos(radLat) * Pi)
+      val mgLat = wgLat + dLat
+      val mgLon = wgLon + dLon
+      (mgLon, mgLat)
+    }
+  }
+
+  //*******************************************************/
+//  def wgsTOgcj(wgLon : Double, wgLat : Double) : (Double, Double)={
+//    (wgLon, wgLat)
+//  }
+
   // Array[String](imsi, time, eNB/pci_freq, ta, rsrp, ismcell)
   def lcMap(in: String, neiInfo: Map[String, String]): (String, Array[String]) = {
     val strArr = in.split(",", -1)
@@ -73,6 +123,7 @@ object shlucegis1 {
       val ta = strArr(lcta_index)
       val rsrp = strArr(lcrsrp_index)
       val ismcell = strArr(lcismcell_index)
+      val (nlon, nlat) = wgsTOgcj(lon, lat)
       if("1" == ismcell){
         neiInfo.get(pcifreq) match{
           case None => ("", Array[String]())
@@ -90,14 +141,14 @@ object shlucegis1 {
               }
             }
             if(neNB != ""){
-              (sampling, Array[String]("1", time, neNB, rsrp, ta, ismcell))
+              (sampling, Array[String]("1", time, neNB, rsrp, ta, ismcell, nlon.toString, nlat.toString))
             }else{
               ("", Array[String]())
             }
           }
         }
       }else {
-        (sampling, Array[String]("1", time, pcifreq, rsrp, ta, ismcell))
+        (sampling, Array[String]("1", time, pcifreq, rsrp, ta, ismcell, nlon.toString, nlat.toString))
       }
     }else{
       ("", Array[String]())
@@ -109,7 +160,7 @@ object shlucegis1 {
     val dataArr = Iter.toArray.sortBy(_(5)).reverse
     if("1" == dataArr.head(5)){
       val fdataArr = ArrayBuffer[String]()
-      fdataArr ++= Array[String](dataArr.head(0), dataArr.head(1), dataArr.head(2), dataArr.head(4), dataArr.head(3))
+      fdataArr ++= Array[String](dataArr.head(0), dataArr.head(1), dataArr.head(2), dataArr.head(4), dataArr.head(3), dataArr.head(6), dataArr.head(7))
       for(i <- 1 to dataArr.length - 1){
         fdataArr += dataArr(i).slice(2, 4).mkString("$")
       }
@@ -139,7 +190,7 @@ object shlucegis1 {
   }
 
   // (用户, (公共信息, 定位信息))
-  // 公共信息: 时间,栅格,采样点  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
+  // 公共信息: 时间,经度,纬度 定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
   def inMapProcess(in: String, neiInfo: Map[String, String], rsrpInfo: Map[String, String], mInfo: Map[String, String]):
   (String, (Array[String], ArrayBuffer[ArrayBuffer[String]])) = {
     val strArr = in.split(",", -1)
@@ -150,7 +201,9 @@ object shlucegis1 {
       val eNB = strArr(eNB_index)
       val ta = strArr(ta_index)
       val mrsrp = strArr(rsrp_index)
-//      val fmrsrp = rsrpInfo.getOrElse(mrsrp, "")
+      val lon = strArr(lon_index)
+      val lat = strArr(lat_index)
+      //      val fmrsrp = rsrpInfo.getOrElse(mrsrp, "")
       if(eNB != "" && mrsrp != "" && time != ""){
         // 将主服务小区纹线信息装入
         fingerArr += ArrayBuffer[String](eNB, ta, "1", mrsrp)
@@ -188,7 +241,7 @@ object shlucegis1 {
         }
       }
       if(fingerArr.length != 0){
-        (imsi, (Array[String](time), fingerArr))
+        (imsi, (Array[String](time, lon, lat), fingerArr))
       }else{
         ("", (Array[String](), ArrayBuffer[ArrayBuffer[String]]()))
       }
@@ -235,13 +288,13 @@ object shlucegis1 {
             val ta = v._2.head(1)
             fcombineinfo += ArrayBuffer[String](v._1, ta, ismcell, mRsrp.toString)
           }
-          fArr += ((Array[String](tArr(combineinfo_num-1)._1(0)), fcombineinfo))
+          fArr += ((tArr(combineinfo_num-1)._1, fcombineinfo))
         }
       }
       fArr ++= sortArr.slice(tIndex, sortArr.length)
-      shfinger1.location(imsi, fArr.toArray, fingerLib1)
+      shfinger1LonLat.location(imsi, fArr.toArray, fingerLib1)
     }else{
-      shfinger1.location(imsi, Iter.toArray, fingerLib1)
+      shfinger1LonLat.location(imsi, Iter.toArray, fingerLib1)
     }
   }
 
@@ -251,7 +304,7 @@ object shlucegis1 {
       System.exit(1)
     }
 
-    val conf = new SparkConf().setAppName("shltegis1")
+    val conf = new SparkConf().setAppName("shlucegislonlat")
     val sc = new SparkContext(conf)
 
     val bsinfo = RedisUtils.getResultMap(bsLib_name)
