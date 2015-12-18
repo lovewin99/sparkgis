@@ -6,25 +6,26 @@ package cn.com.gis.utils
 
 import com.utils.ConfigUtils
 import redis.clients.jedis.{Pipeline, Jedis, JedisPool, JedisPoolConfig}
-
+import scala.collection.JavaConversions._
 //import scala.collection.mutable.Map
 
 object tRedisPutMap {
 
   val propFile = "/config/redis.properties"
   val prop = ConfigUtils.getConfig(propFile)
-  val host = prop.getOrElse("REDIS.HOST", "127.0.0.1")
+  val host = prop.getOrElse("REDIS.HOST", "10.95.3.139")
   val port = prop.getOrElse("REDIS.PORT", "6379").toInt
 
   val config: JedisPoolConfig = new JedisPoolConfig
-  config.setMaxActive(60)
-  config.setMaxIdle(1000)
+  config.setMaxActive(200)
+  config.setMaxIdle(100)
   config.setMaxWait(10000)
   config.setTestOnBorrow(true)
 
   var pool : JedisPool = null
 
   def initPool = {
+//    println(s"host=$host  port=$port")
     pool = new JedisPool(config, host, port)
   }
 
@@ -51,6 +52,21 @@ object tRedisPutMap {
 
   def destroyPool = {
     pool.destroy
+  }
+
+  def getMapFromRedis(tableName: String): scala.collection.immutable.Map[String, String] = {
+    initPool
+    val redis = this.getJedis
+    try {
+      val m = redis.hgetAll(tableName)
+      m.toMap
+    } catch{
+      case e : Exception => System.err.println(e); scala.collection.immutable.Map[String, String]() //should use log in production
+      //      case _ => //never should happen
+    }finally {
+      this.close(pool, redis)
+      destroyPool
+    }
   }
 
   def putMap2Redis(tableName: String, map: Map[String, String]) : Unit ={

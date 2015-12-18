@@ -1,9 +1,5 @@
 package cn.com.gis.etl.shanghai
 
-/**
- * Created by wangxy on 15-11-21.
- */
-
 import java.text.SimpleDateFormat
 
 import com.utils.ConfigUtils
@@ -12,10 +8,13 @@ import org.apache.spark.{SparkContext, SparkConf}
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
 import cn.com.gis.etl.shanghai.function.shfinger1
-import com.utils.RedisUtils
+//import com.utils.RedisUtils
+import cn.com.gis.utils.tRedisPutMap
 
-object shltegis1 {
-
+/**
+ * Created by wangxy on 15-12-8.
+ */
+object shltegis1yh {
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
   val finger_line_max_num = prop.getOrElse("FINGER_LINE_MAX_NUM", "12").toInt
@@ -207,19 +206,27 @@ object shltegis1 {
     // conf.set("spark.akka.askTimeout", "30")
     val sc = new SparkContext(conf)
 
-    val bsinfo = RedisUtils.getResultMap(bsLib_name)
-    val neiinfo = RedisUtils.getResultMap(neiLib_name)
-    val fingerinfo = RedisUtils.getResultMap(fingerlib_name)
-    val rsrpinfo = RedisUtils.getResultMap(tsmrsrplib_name)
+//    val bsinfo = RedisUtils.getResultMap(bsLib_name)
+//    val neiinfo = RedisUtils.getResultMap(neiLib_name)
+//    val fingerinfo = RedisUtils.getResultMap(fingerlib_name)
+//    val rsrpinfo = RedisUtils.getResultMap(tsmrsrplib_name)
 
-    val bslib = sc.broadcast(bsinfo)
-    val neilib = sc.broadcast(neiinfo)
-    val fingerlib= sc.broadcast(fingerinfo)
-    val rsrplib = sc.broadcast(rsrpinfo)
+//    val bslib = sc.broadcast(bsinfo)
+//    val neilib = sc.broadcast(neiinfo)
+//    val fingerlib= sc.broadcast(fingerinfo)
+//    val rsrplib = sc.broadcast(rsrpinfo)
 
-    val textRdd = sc.textFile(args(0), 80)
-    val result = textRdd.map{x => inMapProcess(x, neilib.value, rsrplib.value, bslib.value)}.filter(_._1 != "")
-      //.groupByKey(80).map{y => CombineUserInfo(y._1, y._2, fingerlib.value)}
+    val textRdd = sc.textFile(args(0), 50)
+    val result = textRdd.mapPartitions{Iter =>
+      val bsinfo = tRedisPutMap.getMapFromRedis(bsLib_name)
+      val neiinfo = tRedisPutMap.getMapFromRedis(neiLib_name)
+      val rsrpinfo = tRedisPutMap.getMapFromRedis(tsmrsrplib_name)
+      Iter.map{x => inMapProcess(x, neiinfo, rsrpinfo, bsinfo)}
+    }.filter(_._1 != "").groupByKey(108).mapPartitions{Iter =>
+      val fingerinfo = tRedisPutMap.getMapFromRedis(fingerlib_name)
+      Iter.map{y => CombineUserInfo(y._1, y._2, fingerinfo)}
+    }
+//    val result = textRdd.map{x => inMapProcess(x, neilib.value, rsrplib.value, bslib.value)}.filter(_._1 != "").groupByKey(108).map{y => CombineUserInfo(y._1, y._2, fingerlib.value)}
     result.saveAsTextFile(args(1))
   }
 }
