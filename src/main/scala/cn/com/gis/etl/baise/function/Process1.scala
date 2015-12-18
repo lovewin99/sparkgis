@@ -20,8 +20,13 @@ object Process1 {
   var CellInfo = Map[Int, StaticCellInfo]()
   var NeiInfo = Map[String, Int]()              //["cellid,pci_freq", cellid(临区的)]
 
-  var x = 11626986.857844816
-  var y = 2614746.4238366615
+  // 墨卡托坐标原点
+//  var x = 11626986.857844816
+//  var y = 2614746.4238366615
+
+  // 玉溪坐标原点
+  var x = 11273710.041337123
+  var y = 2669565.9071241533
 
   val aM = 6378245.0
   val ee = 0.00669342162296594323
@@ -39,14 +44,14 @@ object Process1 {
     cellinfo.foreach(e => {
       val c_info = new StaticCellInfo
       val strArr = e._2.split("\t")
-      if (strArr.length == 11){
+      if (strArr.length == 13){
         c_info.cellid_ = e._1.toInt
         c_info.longitude_ = strArr(2).toDouble
         c_info.latitude_ = strArr(3).toDouble
         c_info.freq_ = strArr(7).toInt
         c_info.cell_pci_ = strArr(8).toInt
         c_info.in_door_ = strArr(9).toInt
-        c_info.azimuth_ = strArr(10).toInt
+        c_info.azimuth_ = if (strArr(10) == "" ) 0 else strArr(10).toInt
 
         tmpCellInfo.put(e._1.toInt, c_info)
       }
@@ -295,7 +300,7 @@ object Process1 {
     val angle = aoa / 2       //aoa ta 没有ntohs
     val cellinfo_ = CellInfo.getOrElse(cell_id, new StaticCellInfo)
 
-    if (aoa != -1 && angle < 360 && ta != -1 && ta < 2048 && cellinfo_.cellid_ != -1){
+    if (aoa != 0 && aoa != -1 && angle < 360 && ta != -1 && ta < 2048 && cellinfo_.cellid_ != -1){
       val radius = distance(ta)
       val radian = (360 - angle) * Pi / 180
       val x = cos(radian) * radius
@@ -353,7 +358,7 @@ object Process1 {
           case _ =>{
             //有临区信息
             main_cell.in_door_ match{
-              case 1 => {
+              case 0 => {
                 // 室内
                 val ll1 = GetInsideMRLonLat(main_cell)
                 (ll1._1, ll1._2, 3)

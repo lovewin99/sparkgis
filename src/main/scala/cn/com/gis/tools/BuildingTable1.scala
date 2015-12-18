@@ -23,7 +23,7 @@ object BuildingTable1 {
   var Cneiinfo = Map[String, String]()        //["cellid,pci_freq", cellid(临区的)]
 
   val Cbuildinginfo = Map[String, String]()
-  val build_length = 9
+  val build_length = 8
   val build_lat = 4
   val build_lon = 5
 
@@ -151,7 +151,9 @@ object BuildingTable1 {
 //    RedisUtils.putMap2RedisTable("buildingbaseinfo", Cbaseinfo)
 //    RedisUtils.putMap2RedisTable("buildingneiinfo", Cneiinfo)
 
-    BuildingInfo("/home/wangxy/data/building.txt")
+//    BuildingInfo("/home/wangxy/data/building.txt")
+    val redisFile = if(args.length > 0) args(0) else "/home/s/work/tescomm/玉溪/玉溪建筑物信息.csv"
+    BuildingInfo(redisFile)
 
     RedisUtils.delTable("buildinginfo")
     RedisUtils.putMap2RedisTable("buildinginfo", Cbuildinginfo)
