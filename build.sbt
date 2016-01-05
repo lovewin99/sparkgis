@@ -11,11 +11,14 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-assembly_2.10" % "1.3.0-cdh5.4.0" % "provided",
   "org.apache.spark" % "spark-core_2.10" % "1.3.0-cdh5.4.0",
+  "org.apache.spark" % "spark-streaming_2.10" % "1.3.0-cdh5.4.0",
+  "org.apache.spark" % "spark-streaming-kafka_2.10" % "1.3.0-cdh5.4.0",
   "org.apache.hadoop" % "hadoop-mapreduce-client-jobclient" % "2.6.0-cdh5.4.0",
   "org.apache.hadoop" % "hadoop-mapreduce-client-core" % "2.6.0-cdh5.4.0",
   "org.scalatest" % "scalatest_2.10" % "2.2.0" % "test",
   "redis.clients" % "jedis" % "2.1.0",
-  "net.debasishg" % "redisclient_2.10" % "2.12"
+  "net.debasishg" % "redisclient_2.10" % "2.12",
+  "cn.guoyukun.jdbc" % "oracle-ojdbc6" % "11.2.0.3.0"
 )
 
 //resolvers += "Nexus Repository" at "http://101.251.236.34:8081/nexus/content/groups/scalasbt/"
