@@ -1,6 +1,7 @@
 package cn.com.gis.tools.shanghai
 
 /**
+ * spark-submit --master spark://cloud138:7077 --total-executor-cores 4 --executor-memory 1g --jars  jedis-2.1.0.jar,commons-pool-1.5.6.jar,redisclient_2.10-2.12.jar,commons-pool-1.5.6.jar --driver-class-path redisclient_2.10-2.12.jar:commons-pool-1.5.6.jar --class cn.com.gis.tools.shanghai.gsmGenFingerLib1 sparkgis_2.10-1.0.jar wxy/yuanqu/yuanqugsm.csv
  * Created by wangxy on 15-11-11.
  */
 
@@ -22,7 +23,7 @@ object gsmGenFingerLib1 {
   val rssi_uplimit = prop.getOrElse("RSSI_UPLIMIT", "-40").toInt
 
   // 指纹库名称
-  val Finger_name = "gsmFingerLib1"
+  val Finger_name = "yuanqugsm1"
 
   // 指纹数据长度
   val Finger_length = 11
