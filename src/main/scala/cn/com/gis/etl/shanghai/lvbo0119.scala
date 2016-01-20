@@ -8,20 +8,24 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
 /**
- * Created by wangxy on 15-11-18.
+ * Created by wangxy on 16-1-19.
  */
-object lvbo {
-
+object lvbo0119 {
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
   val grip_size = prop.getOrElse("GRID_SIZE", "25").toInt
 
-  val in_length = 5
+  val in_length = 9
 
-  val index_lonlat = 0
-  val index_sg = 1
-  val index_dis = 2
-  val index_time = 4
+  val time_index = 0
+  val imsi_index = 1
+  val srclon_index = 2
+  val srclat_index = 3
+  val nlon_index = 4
+  val nlat_index = 5
+  val x_index = 6
+  val y_index = 7
+  val dis_index = 8
 
   val dis_time = 40000
   val distance_limit = 5.0   //单位20m
@@ -80,14 +84,14 @@ object lvbo {
     val result = mapRdd.filter(_._1 != "-1").groupByKey().map{
       case (user, info) => {
         val sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS")
-        val vlist = info.toList.sortBy(_(index_time))
+        val vlist = info.toList.sortBy(_(time_index))
         var fdata = ArrayBuffer[Array[String]]()
         var tdata = ArrayBuffer[Array[String]]()
         // 用于记录20条中首条时间
         var ttime = 0L
         vlist.foreach{x =>
           // 当前条数时间
-          val _time = sdf.parse(x(index_time)).getTime
+          val _time = sdf.parse(x(time_index)).getTime
           tdata.length match{
             // 首条数据直接记录
             case 0 =>{
@@ -102,7 +106,7 @@ object lvbo {
                 while(abs(_time - ttime) > dis_time){
                   fdata += tdata.head
                   tdata = tdata.tail
-                  ttime = sdf.parse(tdata.head(index_time)).getTime
+                  ttime = sdf.parse(tdata.head(time_index)).getTime
                 }
               }
             }
@@ -115,31 +119,31 @@ object lvbo {
                 while(tdata.length > 1 && abs(_time - ttime) > dis_time){
                   fdata += tdata.head
                   tdata = tdata.tail
-                  ttime = sdf.parse(tdata.head(index_time)).getTime
+                  ttime = sdf.parse(tdata.head(time_index)).getTime
                 }
               }
-//              tdata += x
+              //              tdata += x
               //计算中心
               if(20 == tdata.length){
                 var sgx = 0.0
                 var sgy = 0.0
                 tdata.foreach{y =>
-                  val xy = y(index_sg).split("\\|",-1)
-                  sgx += xy(0).toDouble
-                  sgy += xy(1).toDouble
+                  sgx += y(x_index).toDouble
+                  sgy += y(y_index).toDouble
                 }
                 sgx /= 20
                 sgy /= 20
-                val xy10 = tdata(10)(index_sg).split("\\|",-1)
-                val d = sqrt(pow(xy10(0).toLong - sgx, 2) + pow(xy10(1).toLong - sgy, 2))
+                val d = sqrt(pow(tdata(10)(x_index).toLong - sgx, 2) + pow(tdata(10)(y_index).toLong - sgy, 2))
                 // 如果第10条数据大于门限值 则用中心坐标更新第10条坐标
-                if(d > distance_limit)
-                  tdata(10).update(index_sg, rint(sgx).toInt + "|" + rint(sgy).toInt)
+                if(d > distance_limit){
+                  tdata(10).update(x_index, rint(sgx).toInt.toString)
+                  tdata(10).update(y_index, rint(sgy).toInt.toString)
+                }
 
                 // 去除第一条数据 更新首条数据时间
                 fdata += tdata.head
                 tdata = tdata.tail
-                ttime = sdf.parse(tdata.head(index_time)).getTime
+                ttime = sdf.parse(tdata.head(time_index)).getTime
               }
             }
           }
@@ -148,13 +152,10 @@ object lvbo {
 
         // 临时算距离
         fdata.foreach{x =>
-          val sg = x(index_sg)
-          val nxy = sg.split("\\|", -1)
-          val sxy = x(index_lonlat).split("\\|", -1)
-          val d = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
+          val d = Mercator2lonlat(x(x_index).toInt * grip_size, x(y_index).toInt * grip_size)
           //          val tmpd = rint(sqrt(pow(d._1 - sxy(0).toDouble, 2) + pow(d._2 - sxy(1).toDouble, 2)))
-          val tmpd = calc_distance(d._1, d._2, sxy(0).toDouble, sxy(1).toDouble)
-          x.update(index_dis, tmpd.toString)
+          val tmpd = calc_distance(d._1, d._2, x(srclon_index).toDouble, x(srclat_index).toDouble)
+          x.update(dis_index, tmpd.toString)
         }
         fdata.map(_.mkString(",")).mkString("\n")
       }

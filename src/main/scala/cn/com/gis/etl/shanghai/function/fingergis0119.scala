@@ -1,7 +1,7 @@
 package cn.com.gis.etl.shanghai.function
 
 /**
- * Created by wangxy on 15-11-18.
+ * Created by wangxy on 16-1-19.
  */
 
 import java.text.SimpleDateFormat
@@ -10,7 +10,7 @@ import com.utils.ConfigUtils
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
 
-object fingergis5 {
+object fingergis0119 {
 
   val propFile = "/config/shanghai.properties"
   val prop = ConfigUtils.getConfig(propFile)
@@ -94,7 +94,7 @@ object fingergis5 {
       })
     }
 
-//    finger.foreach(x => println("mserverfinger = "+x._1))
+    //    finger.foreach(x => println("mserverfinger = "+x._1))
 
     // 文档中步骤3,4,5
     var finger1 = ArrayBuffer[(String, Array[Array[String]])]()
@@ -269,7 +269,7 @@ object fingergis5 {
         case _ => None
       }
 
-//      println("id="+x._1+" samefactor="+sameFactor+"  nSimilar="+nSimilar+"  res="+res)
+      //      println("id="+x._1+" samefactor="+sameFactor+"  nSimilar="+nSimilar+"  res="+res)
 
       (x._1, x._2, x._3, sameFactor, res, nSimilar)
     })
@@ -277,9 +277,8 @@ object fingergis5 {
 
   // (用户, (公共信息, 定位信息))
   // 公共信息: 时间,栅格,采样点  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
-  def location(key: String, Iter: Iterable[(Array[String], ArrayBuffer[ArrayBuffer[String]])],
+  def location1(key: String, Iter: Iterable[(Array[String], ArrayBuffer[ArrayBuffer[String]])],
                fingerInfo: Array[(String, Array[Array[String]])]): String = {
-    println("!!!!!!!!!!!!!")
     var lasttime = 0L
     var osg = "-1|-1"
     Iter.toList.sortBy(_._1(0)).map(x => {
@@ -328,21 +327,19 @@ object fingergis5 {
                   val oxy = osg.split("\\|", -1)
                   val nlonlat = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
                   val olonlat = Mercator2lonlat(oxy(0).toInt * grip_size, oxy(1).toInt * grip_size)
-                  println(s"nlonlat=$nlonlat   olonlat=$olonlat")
                   val d = calc_distance(olonlat._1, olonlat._2, nlonlat._1, nlonlat._2)
                   if (d > twicedistance_limit) {
-                    println(s"sg=$sg  osg=$osg d=$d")
                     val (fx, fy) = (rint((nxy(0).toLong + oxy(0).toLong) / 2).toLong.toString, rint((nxy(1).toLong + oxy(1).toLong) / 2).toLong.toString)
                     sg = Array[String](fx, fy).mkString("|")
-                    println(s"nsg=$sg  osg=$osg")
                     osg = sg
-                  } else{
+                  } else {
                     osg = sg
                   }
-                } else{
-                  lasttime = nowtime
-                  osg = sg
                 }
+//                else{
+//                  lasttime = nowtime
+//                  osg = sg
+//                }
               }
             }
 
@@ -352,7 +349,7 @@ object fingergis5 {
             val d = Mercator2lonlat(nxy(0).toInt * grip_size, nxy(1).toInt * grip_size)
             //          val tmpd = rint(sqrt(pow(d._1 - sxy(0).toDouble, 2) + pow(d._2 - sxy(1).toDouble, 2)))
             val tmpd = calc_distance(d._1, d._2, sxy(0).toDouble, sxy(1).toDouble)
-            Array[String](x._1(1), sg, tmpd.toString, x._1(2), x._1(0)).mkString(",")
+            Array[String](x._1(1).replaceAll("\\|", ","), sg.replaceAll("\\|", ","), tmpd.toString, x._1(2), x._1(0)).mkString(",")
           } else {
             "-1,-1"
           }
@@ -363,5 +360,78 @@ object fingergis5 {
         "-1,-1"
       }
     }).mkString("\n")
+  }
+
+  def location(data: ArrayBuffer[ArrayBuffer[String]], fingerInfo: Array[(String, Array[Array[String]])]): (String, String) = {
+      // mr数据处理
+    var fxy = ("-1", "-1")
+    val scandata = data
+    val scandata1 = scandata.filter(rejectByRssi).sortBy(_(3).toInt).reverse.slice(0, 7)
+    if (scandata1.length > 2) {
+      // 指纹数据处理 !!!!scandata是有序的,根据rssi由强到弱
+      val finger = getCandidateFinger(fingerInfo, scandata1, isfilter_by_mcell)
+      if (finger.size != 0 && scandata1.size != 0) {
+        //        println("finger1=" + finger.map(x => x._2.map(_.mkString(",")).mkString("^")).mkString("\n"))
+        val pxy = getCorePoint(finger)
+        val afinger = filterByDistance(finger, pxy)
+        //        println("finger2=" + afinger.map(x => x._2.map(_.mkString(",")).mkString("^")).mkString("\n"))
+        if (afinger.length != 0) {
+          // 开始计算方差 绝对差 相似系数
+          val tfinger = CalculateVarDiffSim(afinger, scandata1, calculate_choice).sortBy(_._6).reverse
+          val ffinger = tfinger.slice(0, (tfinger.length * (1.0 - similar_percent)).toInt)
+
+          calculate_choice match {
+            case _ => {
+              // 方差和平均绝对差越小越好
+              val sg = ffinger.sortBy(_._5).head._1.split("\\|")
+              fxy = (sg(0), sg(1))
+            }
+          }
+        }
+      }
+    }
+    fxy
+  }
+
+  def twiceCompare(data: Array[(Long, (String, String), Array[String])]): Array[(Long, (String, String), Array[String])] = {
+    if(istwice_compare == 1){
+      println("!!!!!!!!!!!!!!!!!!!!!")
+      var osg = ("-1", "-1")
+      var lasttime = 0L
+      data.sortBy(_._1).map{
+        case (time, (x, y), otherInfo) =>{
+          println(s"time=${otherInfo(2)}")
+          val nowtime = time
+          if (0 == lasttime) {
+            lasttime = nowtime
+            osg = (x, y)
+          } else {
+            if (abs(nowtime - lasttime) <= twicetime_limit) {
+              println(s"time=${otherInfo(2)}")
+              println(s"nowtime=$nowtime    lasttime=$lasttime")
+              lasttime = nowtime
+              val nlonlat = Mercator2lonlat(x.toInt * grip_size, y.toInt * grip_size)
+              val olonlat = Mercator2lonlat(osg._1.toInt * grip_size, osg._2.toInt * grip_size)
+              println(s"nlonlat=$nlonlat   olonlat=$olonlat")
+              val d = calc_distance(olonlat._1, olonlat._2, nlonlat._1, nlonlat._2)
+              if (d > twicedistance_limit) {
+                println(s"sg=$x,$y  osg=$osg d=$d")
+                val (fx, fy) = (rint((x.toLong + osg._1.toLong) / 2).toLong.toString, rint((y.toLong + osg._2.toLong) / 2).toLong.toString)
+                println(s"nsg=$fx,$fy  osg=$osg")
+                osg = (fx, fy)
+              } else {
+                osg = (x,y)
+              }
+            } else{
+              lasttime = nowtime
+              osg = (x, y)
+            }
+          }
+          (time, osg, otherInfo)
+        }
+      }
+    }else{
+      data
+    }
   }
 }

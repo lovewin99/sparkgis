@@ -1,18 +1,22 @@
 package cn.com.gis.etl.shanghai
 
 /**
- * Created by wangxy on 15-11-16.
+ * Created by wangxy on 16-1-19.
  */
 
-import com.utils.ConfigUtils
-import org.apache.spark.{SparkContext, SparkConf}
+import java.text.SimpleDateFormat
 
+import org.apache.spark.{SparkContext, SparkConf}
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
-import cn.com.gis.etl.shanghai.function.fingergis5
-import com.utils.RedisUtils
+import cn.com.gis.etl.shanghai.function.fingergis0119
+import com.utils.{ConfigUtils, RedisUtils}
 
-object gisbase2 {
+object gsmgis0119 {
+
+  val propFile = "/config/shanghai.properties"
+  val prop = ConfigUtils.getConfig(propFile)
+  val grip_size = prop.getOrElse("GRID_SIZE", "25").toInt
 
   // 确定有的
   val mr_length = 42
@@ -53,6 +57,7 @@ object gisbase2 {
     lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271
   }
 
+
   //((采样点,时间,栅格),(标识,ta,ismain,rxlevsub))
   def tmpInmapProcess(in: String): ((String, String, String), Array[String]) = {
     val strArr = in.split(",", -1)
@@ -62,16 +67,14 @@ object gisbase2 {
       if(!outOfChina(lon, lat)){
         val sampling = strArr(Sampling_index)
         val time = strArr(time_index)
-        val coo = lonLat2Mercator(lon, lat)
-//        val sg = (coo._1/25).toInt + "|" + (coo._2/25).toInt
-        val sg = lon + "|" + lat
+        val lonlat = lon + "," + lat
         val flag = strArr(bcch_index) + "|" + strArr(bsic_index)
         val ta = strArr(ta_index)
         val ismain = strArr(ismcell_index)
         val rxlev = strArr(relevsub_index)
         val value1 = Array[String](flag, ta, ismain, rxlev)
         //        println("in="+in)
-        ((sampling, time, sg), value1)
+        ((sampling, time, lonlat), value1)
       }else {
         (("-1", "-1", "-1"), Array[String]())
       }
@@ -85,7 +88,7 @@ object gisbase2 {
   def tmpreduceProcess(key: (String, String, String), Iter: Iterable[Array[String]]):
   (String, (Array[String], ArrayBuffer[ArrayBuffer[String]])) = {
     val time = key._2.replaceAll("[\\-. ]", "")
-    val sg = key._3
+    val lonlat = key._3
 
     var lineArr2 = ArrayBuffer[ArrayBuffer[String]]()
     Iter.toList.groupBy(_(0)).foreach(x => {
@@ -97,7 +100,7 @@ object gisbase2 {
       lineArr2 += lineArr1
     })
     //    println("linearr2="+lineArr2.map{_.mkString(",")}.mkString("$"))
-    ("1", (Array[String](time,sg,key._1), lineArr2))
+    ("1", (Array[String](time,lonlat,key._1), lineArr2))
   }
 
   def main(args: Array[String]): Unit = {
@@ -107,7 +110,7 @@ object gisbase2 {
       System.exit(1)
     }
 
-    val conf = new SparkConf().setAppName("gsmgis1 Application")
+    val conf = new SparkConf().setAppName("gsmgis0119 Application")
     val sc = new SparkContext(conf)
 
     val finfo = RedisUtils.getResultMap("yuanqugsm1")
@@ -121,13 +124,28 @@ object gisbase2 {
     val textRDD = sc.textFile(args(0))
     val result = textRDD.mapPartitions{Iter => Iter.map{tmpInmapProcess}}.groupByKey().map{x => tmpreduceProcess(x._1, x._2)}.groupByKey().
       mapPartitions{Iter =>
-      //      val res = RedisUtils.getResultMap("gsmFingerLib1")
-      //      val fingerlib = res.map{x =>
-      //        val arr = x._2.split("$", -1).map{_.split(",", -1)}
-      //        (x._1, arr)
-      //      }.toArray
-      Iter.map{x =>
-        fingergis5.location(x._1, x._2, info.value)
+      // (用户, (公共信息, 定位信息))
+      // 公共信息: 时间,栅格,采样点  定位信息: 多个纹线   纹线: 标识,ta,ismain,rxlevsub
+      Iter.map{
+        case (imsi, uInfo) =>{
+          val sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS")
+          val locationInfo = uInfo.map{
+            case (Array(time, lonlat, sampling), userFinger) =>{
+              val (x, y) = fingergis0119.location(userFinger, info.value)
+              val timestamp = sdf.parse(time).getTime
+              (timestamp, (x,y), Array(lonlat, sampling, time))
+            }
+          }.filter(_._2  != ("-1", "-1")).toArray
+          fingergis0119.twiceCompare(locationInfo).map{
+            case (timestamp, (x,y), Array(lonlat, sampling, time)) => {
+              val nowlonlat = fingergis0119.Mercator2lonlat(x.toInt*grip_size, y.toInt*grip_size)
+              val srclonlat = lonlat.split(",")
+              val tmpd = fingergis0119.calc_distance(nowlonlat._1, nowlonlat._2, srclonlat(0).toDouble, srclonlat(1).toDouble)
+              //println(s"tmpd=${tmpd.toString}, $nowlonlat, ${srclonlat.mkString(",")}, $x, $y")
+              Array[String](time, imsi,lonlat, nowlonlat._1.toString, nowlonlat._2.toString, x, y, tmpd.toString).mkString(",")
+            }
+          }.mkString("\n")
+        }
       }
     }
     result.saveAsTextFile(args(1))
