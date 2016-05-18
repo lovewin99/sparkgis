@@ -2,6 +2,7 @@ package cn.com.gis.shcs
 
 /**
  * spark-submit --master spark://cloud138:7077 --executor-memory 8g --jars redisclient_2.10-2.12.jar,commons-pool-1.5.6.jar --driver-class-path redisclient_2.10-2.12.jar:commons-pool-1.5.6.jar --class cn.com.gis.etl.shanghai.gsmgis0119 sparkgis_2.10-1.0.jar wxy/gsm0819 wxy/gsmout1
+ * 与0518版本差在字段顺序和时间上
  * Created by wangxy on 16-1-19.
  */
 
